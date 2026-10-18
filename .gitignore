@@ -1,0 +1,60 @@
+# Build & Binary Directories
+build/
+bin/
+CMakeFiles/
+CMakeCache.txt
+*.cmake
+Makefile
+*.o
+*.a
+*.so
+*.dylib
+*.exe
+*.elf
+
+# Local Game Data & Assets (CRITICAL - DO NOT COMMIT GAME DATA)
+*.pc
+*.pak
+*.bik
+*.wav
+*.mp3
+*.ogg
+*.tga
+*.png
+*.bmp
+*.dds
+*.raw
+*.bin
+*.dat
+*.iso
+*.cue
+assets/
+data/
+raw_assets/
+Paks/
+
+# OpenClaw & Agent Scratch/Temp Artifacts
+.openclaw/
+*.flag
+.cache/
+
+# System / IDE Files
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.tmp
+
+# Aider & Local Scratch Logs
+.aider*
+*.md
+!README.md
+!ROADMAP.md
+!QWEN.md
+!REA_model.md
+Modelfile*
+example.txt
+home/
+inspect_textures.py
+memory.md
+notes.md

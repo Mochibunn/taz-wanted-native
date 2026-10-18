@@ -3,10 +3,19 @@
 
 #include <vulkan/vulkan.h>
 #include "../mesh_loader.h"  // For Vertex struct
+#include "../transforms.h"   // For SceneGraphNode, CameraFrustum, TransformUniforms, Matrix4
 #include "vulkan_texture.h"
 #include <vector>
+#include <glm/mat4x4.hpp>
 
 namespace blitz {
+
+// Helper function to find suitable memory type (must be defined before use)
+uint32_t findMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeBits, uint32_t properties);
+
+// Vertex and fragment shader SPIR-V bytecode helpers
+VkShaderModule createVertexShaderModule(VkDevice device);
+VkShaderModule createFragmentShaderModule(VkDevice device);
 
 class VulkanPipeline {
 public:
@@ -14,73 +23,31 @@ public:
     ~VulkanPipeline();
     
     bool initialize(VkDevice _device, VkPhysicalDevice _physical_device);
-    void cleanup();
     
-    // Create the graphics pipeline from shaders
-    VkResult create(const char* vertexShader, const char* fragmentShader);
-    
-    // Begin recording a render pass on command buffer
-    VkCommandBuffer beginRenderPass(VkCommandBuffer commandBuffer, 
-        uint32_t subpassIndex, uint32_t width, uint32_t height) const;
-    
-    // Placeholder - full implementation would create pipeline layout
-    VkCommandBuffer bind(VkCommandBuffer commandBuffer) const { return commandBuffer; }
-    
-    VkCommandBuffer setViewport(VkCommandBuffer commandBuffer, 
-        uint32_t width, uint32_t height) const;
-    
-    VkCommandBuffer drawTriangles(VkCommandBuffer commandBuffer,
-        size_t vertexCount, size_t instanceCount);
-    
-    VkCommandBuffer bindVertexBuffers(VkCommandBuffer commandBuffer, 
-        const std::vector<Vertex>& vertices, 
-        VkBuffer vertexBuffer, VkDeviceSize offset) const;
+    // Create the graphics pipeline from shaders with MVP support
+    bool create(const char* vertexShaderSource, const char* fragmentShaderSource);
 
-    VkCommandBuffer bindIndexBuffer(VkCommandBuffer commandBuffer,
-        const std::vector<uint16_t>& indices,
-        VkBuffer indexBuffer) const;
-
-    void endRenderPass(VkCommandBuffer commandBuffer, 
-        uint32_t subpassIndex) const;
+    // Bind graphics pipeline before drawing (uses vkCmdBindPipeline)
+    // Note: vkCmdBindPipeline is a void function, returns nothing
+    void bind(VkCommandBuffer commandBuffer) const;
     
-    // Removed VulkanContext dependency
-    void submitToQueue() const;
-    
-    void destroy();
-    
-    bool getPipelineLayout() const;
-    
-    VkResult getRenderPass() const;
-    
-    const void* getShaderBindings() const;
-    
-    const VkShaderModule* getVertexShaderModule() const;
-    
-    const VkShaderModule* getFragmentShaderModule() const;
-    
-    VulkanTexture* getTexture() const;
-    
-    VkPhysicalDevice getPhysicalDevice() const;
-    
-    // Get graphics queue - needs proper implementation with device initialization
-    VkQueue getGraphicsQueue() const;
-    
-    // Get color attachment image - placeholder for render pass
-    VkImage getColorAttachment() const;
+    // Get the compiled pipeline handle for validation
+    const VkPipeline* getPipelineHandle() const {
+        return pipelineHandle != VK_NULL_HANDLE ? &pipelineHandle : nullptr;
+    }
 
 private:
     VkDevice device = VK_NULL_HANDLE;
     VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
     VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
-    VkDeviceMemory vertexBufferMemory = VK_NULL_HANDLE;
-    VkDeviceMemory indexBufferMemory = VK_NULL_HANDLE;
-    
-    // Render pass handle for actual render pass creation
+    VkPipeline pipelineHandle = VK_NULL_HANDLE;  // Created pipeline instance
+    VkBuffer uniformBuffer = VK_NULL_HANDLE;
+    VkDeviceMemory uniformBufferMemory = VK_NULL_HANDLE;
     VkRenderPass renderPassHandle = VK_NULL_HANDLE;
     
-    // Framebuffer handle (placeholder - needs proper creation)
-    VkFramebuffer framebuffer = VK_NULL_HANDLE;
-
+    // Shader module storage for graphics pipeline
+    VkShaderModule vertexShaderModule_ = VK_NULL_HANDLE;
+    VkShaderModule fragmentShaderModule_ = VK_NULL_HANDLE;
 };
 
 } // namespace blitz

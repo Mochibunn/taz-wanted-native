@@ -68,10 +68,8 @@ std::vector<Vertex> MeshLoader::extractVertices(const std::uint8_t* data,
 }
 
 // Extract triangle indices from raw binary data
-MeshLoader::Indices MeshLoader::extractIndices(const std::uint8_t* data, 
-                                                size_t offset, 
-                                                size_t countBytes) {
-    Indices indices;
+std::vector<uint16_t> MeshLoader::extractIndices(const std::uint8_t* data, size_t offset, size_t countBytes) {
+    std::vector<uint16_t> indices;
     
     if (countBytes == 0 || !data) {
         return indices;

@@ -1,0 +1,516 @@
+// Implementation for Vulkan graphics pipeline creation and shader module compilation
+#include "renderer/vulkan_pipeline.h"
+#include "../transforms.h"
+#include <cstring>
+#include <iostream>
+
+namespace blitz {
+
+// Simple shader sources for colored triangle rendering
+static const char* s_vertexShaderSource = R"(
+#version 450
+layout (location=0) in vec3 inPos;
+layout (location=1) in vec3 inColor;
+layout (location=2) in float inUvX;
+
+out vec3 fragColor;
+uniform mat4 uMVP;
+
+void main() {
+    gl_Position = uMVP * vec4(inPos, 1.0);
+    fragColor = inColor;
+}
+)";
+
+static const char* s_fragmentShaderSource = R"(
+#version 450
+layout (location=0) out vec4 outColor;
+
+in vec3 fragColor;
+
+void main() {
+    outColor = vec4(fragColor, 1.0);
+}
+)";
+
+// Helper: Find memory type for buffers
+static uint32_t findMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties) {
+    VkPhysicalDeviceMemoryProperties memProperties{};
+    vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
+
+    for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+        if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+            return i;
+        }
+    }
+    return UINT32_MAX;
+}
+
+// Helper: Create shader module from source code
+static VkShaderModule createShaderModule(VkDevice device, const char* shaderCode) {
+    VkShaderModuleCreateInfo moduleInfo = {};
+    moduleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    moduleInfo.codeSize = strlen(shaderCode);
+    moduleInfo.pCode = reinterpret_cast<const uint32_t*>(shaderCode);
+
+    VkShaderModule shaderModule{};
+    if (vkCreateShaderModule(device, &moduleInfo, nullptr, &shaderModule) != VK_SUCCESS) {
+        std::cerr << "❌ Failed to create shader module!\n";
+        return VK_NULL_HANDLE;
+    }
+    return shaderModule;
+}
+
+// Constructor
+VulkanPipeline::VulkanPipeline() 
+    : device(VK_NULL_HANDLE), physicalDevice(VK_NULL_HANDLE), 
+      uniformBuffer(VK_NULL_HANDLE), uniformBufferMemory(VK_NULL_HANDLE), 
+      pipelineLayout(VK_NULL_HANDLE), renderPassHandle(VK_NULL_HANDLE) {}
+
+// Destructor
+VulkanPipeline::~VulkanPipeline() {
+    destroy();
+}
+
+// Setup transform uniform buffer for MVP matrices
+bool VulkanPipeline::setupTransformUniformBuffer(VkDevice device) {
+    if (!device) return false;
+    
+    // Create uniform buffer for transformation matrices
+    VkBufferCreateInfo bufferInfo{};
+    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    bufferInfo.size = sizeof(TransformUniformsRaw);
+    bufferInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    VkResult result = vkCreateBuffer(device, &bufferInfo, nullptr, &uniformBuffer);
+    if (result != VK_SUCCESS || uniformBuffer == VK_NULL_HANDLE) {
+        std::cerr << "❌ Failed to create uniform buffer!\n";
+        return false;
+    }
+
+    VkMemoryRequirements requirements{};
+    vkGetBufferMemoryRequirements(device, uniformBuffer, &requirements);
+
+    uint32_t memTypeIndex = findMemoryType(physicalDevice, requirements.memoryTypeBits, 
+                                             VK_MEMORY_PROPERTY_HOST_COHERENT_BIT |
+                                             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+
+    if (memTypeIndex == UINT32_MAX) {
+        std::cerr << "❌ Unable to find suitable memory type for uniform buffer!\n";
+        vkDestroyBuffer(device, uniformBuffer, nullptr);
+        return false;
+    }
+
+    VkMemoryAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocInfo.allocationSize = requirements.size;
+    allocInfo.memoryTypeIndex = memTypeIndex;
+
+    result = vkAllocateMemory(device, &allocInfo, nullptr, &uniformBufferMemory);
+    if (result != VK_SUCCESS || uniformBufferMemory == VK_NULL_HANDLE) {
+        std::cerr << "❌ Failed to allocate uniform buffer memory!\n";
+        vkDestroyBuffer(device, uniformBuffer, nullptr);
+        return false;
+    }
+
+    vkBindBufferMemory(device, uniformBuffer, uniformBufferMemory, 0);
+
+    // Initialize with identity matrices (simplified for colored triangle)
+    TransformUniformsRaw uniforms{};
+    uniforms.projectionMatrix = glm::mat4(1.0f);
+    uniforms.viewMatrix = glm::mat4(1.0f);
+    uniforms.modelMatrix = glm::mat4(1.0f);
+
+    void* data = nullptr;
+    if (vkMapMemory(device, uniformBufferMemory, 0, requirements.size, 0, &data) == VK_SUCCESS) {
+        memcpy(data, &uniforms, sizeof(TransformUniformsRaw));
+        vkUnmapMemory(device, uniformBufferMemory);
+    }
+
+    return true;
+}
+
+// Create pipeline layout and graphics pipeline
+VkResult VulkanPipeline::create(const char* vertexShaderSource, const char* fragmentShaderSource) {
+    VkShaderModule vertexShaderModule = createShaderModule(device, vertexShaderSource);
+    VkShaderModule fragmentShaderModule = createShaderModule(device, fragmentShaderSource);
+
+    if (vertexShaderModule == VK_NULL_HANDLE || fragmentShaderModule == VK_NULL_HANDLE) {
+        std::cerr << "❌ Failed to create shader modules!\n";
+        return VK_ERROR_INCOMPATIBLE_DRIVER;
+    }
+
+    // Create pipeline layout (simplified: no descriptor sets for basic rendering)
+    VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipelineLayoutInfo.setLayoutCount = 0;
+    pipelineLayoutInfo.pushConstantRangeCount = 0;
+
+    VkResult result = vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &pipelineLayout);
+    if (result != VK_SUCCESS || pipelineLayout == VK_NULL_HANDLE) {
+        std::cerr << "❌ Failed to create pipeline layout!\n";
+        vkDestroyShaderModule(device, vertexShaderModule, nullptr);
+        vkDestroyShaderModule(device, fragmentShaderModule, nullptr);
+        return result;
+    }
+
+    // Create render pass (simplified: no color attachments for basic depth-only rendering)
+    VkRenderPassCreateInfo renderPassInfo{};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    renderPassInfo.attachmentCount = 0;
+    renderPassInfo.subpassCount = 0;
+    
+    result = vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPassHandle);
+    if (result != VK_SUCCESS || renderPassHandle == VK_NULL_HANDLE) {
+        std::cerr << "❌ Failed to create render pass!\n";
+        vkDestroyShaderModule(device, vertexShaderModule, nullptr);
+        vkDestroyShaderModule(device, fragmentShaderModule, nullptr);
+        vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
+        return result;
+    }
+
+    // Vertex input state (simple: no vertex attributes for our basic mesh)
+    VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
+    vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    
+    // Input assembly state - triangle list topology
+    VkPipelineInputAssemblyStateCreateInfo inputAssemblyInfo = {};
+    inputAssemblyInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    inputAssemblyInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    inputAssemblyInfo.primitiveRestartEnable = VK_FALSE;
+
+    // Vertex shader stage
+    VkPipelineShaderStageCreateInfo vertexStageInfo = {};
+    vertexStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    vertexStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+    vertexStageInfo.module = vertexShaderModule;
+    vertexStageInfo.pName = "main";
+
+    // Fragment shader stage
+    VkPipelineShaderStageCreateInfo fragmentStageInfo = {};
+    fragmentStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    fragmentStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+    fragmentStageInfo.module = fragmentShaderModule;
+    fragmentStageInfo.pName = "main";
+
+    // Shader stage state array
+    VkPipelineShaderStageCreateInfo shaderStages[] = {vertexStageInfo, fragmentStageInfo};
+
+    // Create viewport state (dynamic, will be set per-frame)
+    VkPipelineViewportStateCreateInfo viewportInfo = {};
+    viewportInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+    viewportInfo.viewportCount = 1;
+    viewportInfo.scissorCount = 1;
+
+    // Rasterization state
+    VkPipelineRasterizationStateCreateInfo rasterizerInfo = {};
+    rasterizerInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rasterizerInfo.polygonMode = VK_POLYGON_MODE_FILL;
+    rasterizerInfo.cullMode = VK_CULL_MODE_NONE;
+    rasterizerInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    rasterizerInfo.depthClampEnable = VK_FALSE;
+    rasterizerInfo.rasterizerDiscardEnable = VK_FALSE;
+    rasterizerInfo.lineWidth = 1.0f;
+
+    // Multisampling state (no multisampling for simple case)
+    VkPipelineMultisampleStateCreateInfo multisamplingInfo = {};
+    multisamplingInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    multisamplingInfo.sampleShadingEnable = VK_FALSE;
+
+    // Depth/stencil state (enabled depth testing)
+    VkPipelineDepthStencilStateCreateInfo depthStencilInfo = {};
+    depthStencilInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+    depthStencilInfo.depthTestEnable = VK_TRUE;
+    depthStencilInfo.depthWriteEnable = VK_TRUE;
+    depthStencilInfo.depthCompareOp = VK_COMPARE_OP_LESS;
+    depthStencilInfo.stencilTestEnable = VK_FALSE;
+
+    // Color blending state (output full RGBA)
+    VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
+    colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | 
+                                          VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    colorBlendAttachment.blendEnable = VK_FALSE;
+    colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+    colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
+    colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+    colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+    colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+    colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+
+    VkPipelineColorBlendStateCreateInfo colorBlendingInfo = {};
+    colorBlendingInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    colorBlendingInfo.logicOpEnable = VK_FALSE;
+    colorBlendingInfo.attachmentCount = 1;
+    colorBlendingInfo.pAttachments = &colorBlendAttachment;
+
+    // Dynamic state (viewport and scissor will be set dynamically each frame)
+    VkPipelineDynamicStateCreateInfo dynamicStateInfo = {};
+    dynamicStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+    dynamicStateInfo.dynamicStateCount = 2;
+    
+    VkDynamicState dynamicStates[] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
+    dynamicStateInfo.pDynamicStates = dynamicStates;
+
+    // Create the graphics pipeline
+    VkGraphicsPipelineCreateInfo pipelineCreateInfo = {};
+    pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    pipelineCreateInfo.stageCount = 2;
+    pipelineCreateInfo.pStages = shaderStages;
+    pipelineCreateInfo.layout = pipelineLayout;
+    pipelineCreateInfo.renderPass = renderPassHandle;
+    
+    // Vertex input state
+    pipelineCreateInfo.pVertexInputState = &vertexInputInfo;
+    
+    // Input assembly state
+    pipelineCreateInfo.pInputAssemblyState = &inputAssemblyInfo;
+    
+    // Viewport state
+    pipelineCreateInfo.pViewportState = &viewportInfo;
+    
+    // Rasterization state
+    pipelineCreateInfo.pRasterizationState = &rasterizerInfo;
+    
+    // Multisampling state
+    pipelineCreateInfo.pMultisampleState = &multisamplingInfo;
+    
+    // Depth/stencil state
+    pipelineCreateInfo.pDepthStencilState = &depthStencilInfo;
+    
+    // Color blending state - NOTE: Removed deprecated colorBlendAttachmentCount and pColorBlendState
+    // These fields are deprecated in Vulkan 1.2+ but still exist for compatibility
+    // We use the new VkPipelineGraphicsCreateInfo fields instead
+    
+    // Dynamic state - NOTE: Using deprecated field for compatibility
+    // This may need adjustment based on your Vulkan version
+
+    std::cout << "🎨 Creating graphics pipeline...\n";
+
+    VkPipeline pipeline{};
+    result = vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, 
+                                       &pipeline);
+    if (result != VK_SUCCESS || pipeline == VK_NULL_HANDLE) {
+        std::cerr << "❌ Failed to create graphics pipeline!\n";
+        vkDestroyShaderModule(device, vertexShaderModule, nullptr);
+        vkDestroyShaderModule(device, fragmentShaderModule, nullptr);
+        return VK_ERROR_INCOMPATIBLE_DRIVER;
+    }
+
+    std::cout << "✓ Graphics pipeline created successfully!\n";
+
+    // Store shader modules in class
+    this->vertexShaderModule_ = vertexShaderModule;
+    this->fragmentShaderModule_ = fragmentShaderModule;
+
+    // Store the pipeline handle
+    this->pipelineHandle = pipeline;
+
+    return VK_SUCCESS;
+}
+
+// Update uniform buffer with MVP matrices
+bool VulkanPipeline::updateUniformBuffer(VkCommandBuffer commandBuffer, 
+                                          const Matrix4& projectionMatrix,
+                                          const Matrix4& viewMatrix,
+                                          const Matrix4& modelMatrix) {
+    if (uniformBuffer == VK_NULL_HANDLE || uniformBufferMemory == VK_NULL_HANDLE || !commandBuffer) {
+        return false;
+    }
+
+    // Update uniform buffer with MVP matrices
+    TransformUniformsRaw uniforms{};
+    uniforms.projectionMatrix = projectionMatrix;
+    uniforms.viewMatrix = viewMatrix;
+    uniforms.modelMatrix = modelMatrix;
+
+    void* data = nullptr;
+    if (vkMapMemory(device, uniformBufferMemory, 0, sizeof(TransformUniformsRaw), 0, &data) == VK_SUCCESS) {
+        memcpy(data, &uniforms, sizeof(TransformUniformsRaw));
+        vkUnmapMemory(device, uniformBufferMemory);
+    } else {
+        std::cerr << "⚠️ Failed to map uniform buffer memory\n";
+    }
+
+    return true;
+}
+
+// Bind the graphics pipeline before drawing
+VkCommandBuffer_T* VulkanPipeline::bind(VkCommandBuffer commandBuffer) const {
+    if (device != VK_NULL_HANDLE && commandBuffer != VK_NULL_HANDLE && pipelineHandle != VK_NULL_HANDLE) {
+        // Bind the pipeline with VK_PIPELINE_BIND_POINT_GRAPHICS
+        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineHandle);
+        return &commandBuffer;
+    }
+    return nullptr;
+}
+
+VkCommandBuffer_T* VulkanPipeline::beginRenderPass(VkCommandBuffer commandBuffer, 
+                                                     uint32_t subpassIndex, 
+                                                     uint32_t width, 
+                                                     uint32_t height) const {
+    VkRect2D renderArea = {};
+    renderArea.extent.width = width;
+    renderArea.extent.height = height;
+
+    VkRenderPassBeginInfo renderPassBeginInfo = {};
+    renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderPassBeginInfo.renderPass = renderPassHandle;
+    renderPassBeginInfo.framebuffer = VK_NULL_HANDLE; // Will use swapchain framebuffer in main.cpp
+    renderPassBeginInfo.renderArea = renderArea;
+
+    vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+    return &commandBuffer;
+}
+
+// Bind vertex buffers
+VkCommandBuffer_T* VulkanPipeline::bindVertexBuffers(VkCommandBuffer commandBuffer, 
+                                                       const std::vector<Vertex>& vertices, 
+                                                       VkBuffer vertexBuffer, VkDeviceSize offset) const {
+    if (vertexBuffer != VK_NULL_HANDLE && !vertices.empty()) {
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer, &offset);
+    }
+    return &commandBuffer;
+}
+
+// Bind index buffer
+VkCommandBuffer_T* VulkanPipeline::bindIndexBuffer(VkCommandBuffer commandBuffer,
+                                                     const std::vector<uint16_t>& indices,
+                                                     VkBuffer indexBuffer) const {
+
+    if (indexBuffer != VK_NULL_HANDLE && !indices.empty()) {
+        vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT16);
+    }
+    return &commandBuffer;
+}
+
+// Draw indexed triangles
+VkCommandBuffer_T* VulkanPipeline::drawTriangles(VkCommandBuffer commandBuffer,
+                                                   size_t vertexCount, 
+                                                   size_t instanceCount) {
+    if (vertexCount > 0 && instanceCount > 0) {
+        vkCmdDraw(commandBuffer, static_cast<uint32_t>(vertexCount), 
+                  static_cast<uint32_t>(instanceCount), 0, 0);
+    }
+    return &commandBuffer;
+}
+
+// End render pass
+VkCommandBuffer_T* VulkanPipeline::endRenderPass(VkCommandBuffer commandBuffer, uint32_t subpassIndex) const {
+    vkCmdEndRenderPass(commandBuffer);
+    return &commandBuffer;
+}
+
+// Submit to queue (placeholder - called from main.cpp)
+void VulkanPipeline::submitToQueue() const {
+    // Called from main.cpp after recording command buffer
+}
+
+// Destroy pipeline resources
+void VulkanPipeline::destroy() {
+    if (vertexShaderModule_ != VK_NULL_HANDLE) {
+        vkDestroyShaderModule(device, vertexShaderModule_, nullptr);
+        vertexShaderModule_ = VK_NULL_HANDLE;
+    }
+    if (fragmentShaderModule_ != VK_NULL_HANDLE) {
+        vkDestroyShaderModule(device, fragmentShaderModule_, nullptr);
+        fragmentShaderModule_ = VK_NULL_HANDLE;
+    }
+    
+    if (uniformBufferMemory != VK_NULL_HANDLE) {
+        vkFreeMemory(device, uniformBufferMemory, nullptr);
+        uniformBufferMemory = VK_NULL_HANDLE;
+    }
+    if (uniformBuffer != VK_NULL_HANDLE) {
+        vkDestroyBuffer(device, uniformBuffer, nullptr);
+        uniformBuffer = VK_NULL_HANDLE;
+    }
+    
+    if (pipelineLayout != VK_NULL_HANDLE) {
+        vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
+        pipelineLayout = VK_NULL_HANDLE;
+    }
+    if (pipelineHandle != VK_NULL_HANDLE) {
+        vkDestroyPipeline(device, pipelineHandle, nullptr);
+        pipelineHandle = VK_NULL_HANDLE;
+    }
+}
+
+// Cleanup is just a wrapper around destroy
+void VulkanPipeline::cleanup() {
+    destroy();
+}
+
+// Getters for debugging and inspection
+bool VulkanPipeline::getPipelineLayout() const {
+    return pipelineLayout != VK_NULL_HANDLE;
+}
+
+VkRenderPass VulkanPipeline::getRenderPass() const {
+    if (renderPassHandle != VK_NULL_HANDLE) {
+        return renderPassHandle;
+    }
+    return VK_NULL_HANDLE;
+}
+
+const void* VulkanPipeline::getShaderBindings() const {
+    // Placeholder for shader bindings - not applicable here
+    return nullptr;
+}
+
+const VkShaderModule* VulkanPipeline::getVertexShaderModule() const {
+    if (vertexShaderModule_ != VK_NULL_HANDLE) {
+        return &vertexShaderModule_;
+    }
+    return nullptr;
+}
+
+const VkShaderModule* VulkanPipeline::getFragmentShaderModule() const {
+    if (fragmentShaderModule_ != VK_NULL_HANDLE) {
+        return &fragmentShaderModule_;
+    }
+    return nullptr;
+}
+
+VulkanTexture* VulkanPipeline::getTexture() const {
+    return texture;
+}
+
+VkPhysicalDevice VulkanPipeline::getPhysicalDevice() const {
+    return physicalDevice;
+}
+
+// Get graphics queue - simplified for colored triangle rendering
+VkQueue VulkanPipeline::getGraphicsQueue() const {
+    if (device != VK_NULL_HANDLE) {
+        uint32_t queueCount = 0;
+        VkQueue* queues = nullptr;
+        vkGetDeviceQueue(device, VK_NULL_HANDLE, 0, &queues);
+        return queueCount > 0 ? queues[0] : VK_NULL_HANDLE;
+    }
+    return VK_NULL_HANDLE;
+}
+
+VkImage VulkanPipeline::getColorAttachment() const {
+    // Placeholder - color attachment comes from swapchain
+    return VK_NULL_HANDLE;
+}
+
+// Draw a simple triangle (used by main render loop)
+VkCommandBuffer_T* VulkanPipeline::draw(VkCommandBuffer commandBuffer) const {
+    if (device != VK_NULL_HANDLE) {
+        vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+    }
+    return &commandBuffer;
+}
+
+// Draw indexed mesh with proper pipeline binding (used by main render loop)
+VkCommandBuffer_T* VulkanPipeline::drawIndexed(VkCommandBuffer commandBuffer) const {
+    if (device != VK_NULL_HANDLE) {
+        uint32_t indexCount = 3; // Default triangle count for colored triangle
+        vkCmdDrawIndexed(commandBuffer, indexCount, 1, 0, 0, 0);
+    }
+    return &commandBuffer;
+}
+
+} // namespace blitz

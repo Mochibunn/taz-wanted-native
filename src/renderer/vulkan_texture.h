@@ -2,6 +2,7 @@
 #define VULKAN_TEXTURE_H
 
 #include <vulkan/vulkan.h>
+#include "../mesh_loader.h"
 #include "../texture_loader.h"
 
 namespace blitz {

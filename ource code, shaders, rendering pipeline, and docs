@@ -1,0 +1,674 @@
+[1mdiff --git a/src/main.cpp b/src/main.cpp[m
+[1mindex 051894b..9d040f7 100644[m
+[1m--- a/src/main.cpp[m
+[1m+++ b/src/main.cpp[m
+[36m@@ -1,3 +1,7 @@[m
+[32m+[m[32m#include "vulkan_pipeline.h"[m
+[32m+[m[32m#include "texture_loader.h"[m
+[32m+[m[32m#include "../renderer/vulkan_pipeline.h"[m
+[32m+[m[32m#include "../mesh_loader.h"[m
+ #include <SDL2/SDL.h>[m
+ #include <SDL2/SDL_vulkan.h>[m
+ #include <vulkan/vulkan.h>[m
+[36m@@ -14,39 +18,39 @@[m [mstruct SwapChainSupportDetails {[m
+ };[m
+ [m
+ SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface) {[m
+[31m-    SwapChainSupportDetails details;[m
+[32m+[m[32m    SwapChainSupportDetails details{};[m
+     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);[m
+ [m
+[31m-    uint32_t formatCount;[m
+[31m-    vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);[m
+[31m-    if (formatCount != 0) {[m
+[31m-        details.formats.resize(formatCount);[m
+[31m-        vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, details.formats.data());[m
+[32m+[m[32m    uint32_t formatCount = 0;[m
+[32m+[m[32m    if (vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr) == VK_SUCCESS && formatCount > 0) {[m
+[32m+[m[32m        std::vector<VkSurfaceFormatKHR> formats(formatCount);[m
+[32m+[m[32m        vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, formats.data());[m
+[32m+[m[32m        details.formats = std::move(formats);[m
+     }[m
+ [m
+[31m-    uint32_t presentModeCount;[m
+[31m-    vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);[m
+[31m-    if (presentModeCount != 0) {[m
+[31m-        details.presentModes.resize(presentModeCount);[m
+[31m-        vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, details.presentModes.data());[m
+[32m+[m[32m    uint32_t presentModeCount = 0;[m
+[32m+[m[32m    if (vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr) == VK_SUCCESS && presentModeCount > 0) {[m
+[32m+[m[32m        std::vector<VkPresentModeKHR> presentModes(presentModeCount);[m
+[32m+[m[32m        vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, presentModes.data());[m
+[32m+[m[32m        details.presentModes = std::move(presentModes);[m
+     }[m
+ [m
+     return details;[m
+ }[m
+ [m
+ VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) {[m
+[31m-    for (const auto& availableFormat : availableFormats) {[m
+[31m-        if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {[m
+[31m-            return availableFormat;[m
+[32m+[m[32m    for (const auto& format : availableFormats) {[m
+[32m+[m[32m        if (format.format == VK_FORMAT_B8G8R8A8_SRGB && format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {[m
+[32m+[m[32m            return format;[m
+         }[m
+     }[m
+     return availableFormats[0];[m
+ }[m
+ [m
+ VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes) {[m
+[31m-    for (const auto& availablePresentMode : availablePresentModes) {[m
+[31m-        if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {[m
+[31m-            return availablePresentMode;[m
+[32m+[m[32m    for (const auto& mode : availablePresentModes) {[m
+[32m+[m[32m        if (mode == VK_PRESENT_MODE_MAILBOX_KHR) {[m
+[32m+[m[32m            return mode;[m
+         }[m
+     }[m
+     return VK_PRESENT_MODE_FIFO_KHR;[m
+[36m@@ -59,10 +63,9 @@[m [mVkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, SDL_Wi[m
+         int width, height;[m
+         SDL_Vulkan_GetDrawableSize(window, &width, &height);[m
+ [m
+[31m-        VkExtent2D actualExtent = {[m
+[31m-            static_cast<uint32_t>(width),[m
+[31m-            static_cast<uint32_t>(height)[m
+[31m-        };[m
+[32m+[m[32m        VkExtent2D actualExtent = {};[m
+[32m+[m[32m        actualExtent.width = static_cast<uint32_t>(width);[m
+[32m+[m[32m        actualExtent.height = static_cast<uint32_t>(height);[m
+ [m
+         actualExtent.width = std::clamp(actualExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);[m
+         actualExtent.height = std::clamp(actualExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);[m
+[36m@@ -71,9 +74,36 @@[m [mVkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, SDL_Wi[m
+     }[m
+ }[m
+ [m
+[32m+[m[32m// Helper: Find memory type suitable for vertex/index buffers[m
+[32m+[m[32mstatic uint32_t findMemoryType(VkPhysicalDevice device, uint32_t typeIndex, uint32_t typeFilter, VkMemoryPropertyFlags properties) {[m
+[32m+[m[32m    VkPhysicalDeviceMemoryProperties memProperties{};[m
+[32m+[m[32m    vkGetPhysicalDeviceMemoryProperties(device, &memProperties);[m
+[32m+[m[32m    for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {[m
+[32m+[m[32m        if ((i == typeIndex) &&[m[41m [m
+[32m+[m[32m            ((memProperties.memoryTypes[i].propertyFlags & typeFilter) == properties) &&[m
+[32m+[m[32m            (memProperties.memoryTypes[i].heapIndex == memProperties.memoryTypes[0].heapIndex)) {[m
+[32m+[m[32m            return i;[m
+[32m+[m[32m        }[m
+[32m+[m[32m    }[m
+[32m+[m[32m    return 0; // fallback - should use first heap[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32m// Vertex structure matching the mesh loader's packed format[m
+[32m+[m[32mstruct Vertex {[m
+[32m+[m[32m    float position[3];  // x, y, z[m
+[32m+[m[32m    float texCoord[2];   // u, v[m
+[32m+[m[32m};[m
+[32m+[m
+[32m+[m[32m// Mesh data container[m
+[32m+[m[32mstruct MeshData {[m
+[32m+[m[32m    std::vector<Vertex> vertices;[m
+[32m+[m[32m    std::vector<uint16_t> indices;[m
+[32m+[m[32m    bool valid = false;[m
+[32m+[m[32m};[m
+[32m+[m
+ int main(int argc, char* argv[]) {[m
+     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER) != 0) {[m
+[31m-        std::cerr << "🐰❌ Failed to initialize SDL: " << SDL_GetError() << "\n";[m
+[32m+[m[32m        std::cerr << "❌ Failed to initialize SDL: " << SDL_GetError() << "\n";[m
+         return 1;[m
+     }[m
+ [m
+[36m@@ -86,7 +116,7 @@[m [mint main(int argc, char* argv[]) {[m
+     );[m
+ [m
+     if (!window) {[m
+[31m-        std::cerr << "🐰❌ Failed to create SDL window: " << SDL_GetError() << "\n";[m
+[32m+[m[32m        std::cerr << "❌ Failed to create SDL window: " << SDL_GetError() << "\n";[m
+         SDL_Quit();[m
+         return 1;[m
+     }[m
+[36m@@ -99,10 +129,12 @@[m [mint main(int argc, char* argv[]) {[m
+     appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);[m
+     appInfo.apiVersion = VK_API_VERSION_1_0;[m
+ [m
+[31m-    unsigned int extensionCount = 0;[m
+[31m-    SDL_Vulkan_GetInstanceExtensions(window, &extensionCount, nullptr);[m
+[32m+[m[32m    uint32_t extensionCount = 0;[m
+     std::vector<const char*> extensions(extensionCount);[m
+[31m-    SDL_Vulkan_GetInstanceExtensions(window, &extensionCount, extensions.data());[m
+[32m+[m[32m    if (SDL_Vulkan_GetInstanceExtensions(window, &extensionCount, nullptr) == VK_SUCCESS && extensionCount > 0) {[m
+[32m+[m[32m        extensions.resize(extensionCount);[m
+[32m+[m[32m        SDL_Vulkan_GetInstanceExtensions(window, &extensionCount, extensions.data());[m
+[32m+[m[32m    }[m
+ [m
+     VkInstanceCreateInfo createInfo{};[m
+     createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;[m
+[36m@@ -112,18 +144,28 @@[m [mint main(int argc, char* argv[]) {[m
+ [m
+     VkInstance instance;[m
+     if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) {[m
+[31m-        std::cerr << "🐰❌ Failed to create Vulkan instance!\n";[m
+[32m+[m[32m        std::cerr << "❌ Failed to create Vulkan instance!\n";[m
+[32m+[m[32m        SDL_Quit();[m
+         return 1;[m
+     }[m
+ [m
+     VkSurfaceKHR surface;[m
+     if (!SDL_Vulkan_CreateSurface(window, instance, &surface)) {[m
+[31m-        std::cerr << "🐰❌ Failed to create surface!\n";[m
+[32m+[m[32m        std::cerr << "❌ Failed to create surface!\n";[m
+[32m+[m[32m        vkDestroyInstance(instance, nullptr);[m
+[32m+[m[32m        SDL_Quit();[m
+         return 1;[m
+     }[m
+ [m
+     uint32_t deviceCount = 0;[m
+     vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);[m
+[32m+[m[32m    if (deviceCount == 0) {[m
+[32m+[m[32m        std::cerr << "❌ No GPUs available!\n";[m
+[32m+[m[32m        vkDestroyInstance(instance, nullptr);[m
+[32m+[m[32m        SDL_Quit();[m
+[32m+[m[32m        return 1;[m
+[32m+[m[32m    }[m
+[32m+[m
+     std::vector<VkPhysicalDevice> devices(deviceCount);[m
+     vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());[m
+ [m
+[36m@@ -139,7 +181,7 @@[m [mint main(int argc, char* argv[]) {[m
+         uint32_t i = 0;[m
+         for (const auto& queueFamily : queueFamilies) {[m
+             VkBool32 presentSupport = false;[m
+[31m-            vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);[m
+[32m+[m[32m            vkGetPhysicalDeviceSurfaceSupportKHR(device, static_cast<uint32_t>(i), surface, &presentSupport);[m
+ [m
+             if ((queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) && presentSupport) {[m
+                 physicalDevice = device;[m
+[36m@@ -175,7 +217,10 @@[m [mint main(int argc, char* argv[]) {[m
+ [m
+     VkDevice device;[m
+     if (vkCreateDevice(physicalDevice, &deviceCreateInfo, nullptr, &device) != VK_SUCCESS) {[m
+[31m-        std::cerr << "🐰❌ Failed to create logical device!\n";[m
+[32m+[m[32m        std::cerr << "❌ Failed to create logical device!\n";[m
+[32m+[m[32m        vkDestroySurfaceKHR(instance, surface, nullptr);[m
+[32m+[m[32m        vkDestroyInstance(instance, nullptr);[m
+[32m+[m[32m        SDL_Quit();[m
+         return 1;[m
+     }[m
+ [m
+[36m@@ -209,14 +254,18 @@[m [mint main(int argc, char* argv[]) {[m
+ [m
+     VkSwapchainKHR swapChain;[m
+     if (vkCreateSwapchainKHR(device, &swapChainCreateInfo, nullptr, &swapChain) != VK_SUCCESS) {[m
+[31m-        std::cerr << "🐰❌ Failed to create swapchain!\n";[m
+[32m+[m[32m        std::cerr << "❌ Failed to create swapchain!\n";[m
+[32m+[m[32m        vkDestroyDevice(device, nullptr);[m
+[32m+[m[32m        vkDestroySurfaceKHR(instance, surface, nullptr);[m
+[32m+[m[32m        vkDestroyInstance(instance, nullptr);[m
+[32m+[m[32m        SDL_Quit();[m
+         return 1;[m
+     }[m
+ [m
+[31m-    std::vector<VkImage> swapChainImages;[m
+[31m-    vkGetSwapchainImagesKHR(device, swapChain, &imageCount, nullptr);[m
+[31m-    swapChainImages.resize(imageCount);[m
+[31m-    vkGetSwapchainImagesKHR(device, swapChain, &imageCount, swapChainImages.data());[m
+[32m+[m[32m    uint32_t imageCountResult = 0;[m
+[32m+[m[32m    vkGetSwapchainImagesKHR(device, swapChain, &imageCountResult, nullptr);[m
+[32m+[m[32m    std::vector<VkImage> swapChainImages(imageCountResult);[m
+[32m+[m[32m    vkGetSwapchainImagesKHR(device, swapChain, &imageCountResult, swapChainImages.data());[m
+ [m
+     std::vector<VkImageView> swapChainImageViews(swapChainImages.size());[m
+     for (size_t i = 0; i < swapChainImages.size(); i++) {[m
+[36m@@ -231,7 +280,14 @@[m [mint main(int argc, char* argv[]) {[m
+         viewInfo.subresourceRange.baseArrayLayer = 0;[m
+         viewInfo.subresourceRange.layerCount = 1;[m
+ [m
+[31m-        vkCreateImageView(device, &viewInfo, nullptr, &swapChainImageViews[i]);[m
+[32m+[m[32m        if (vkCreateImageView(device, &viewInfo, nullptr, &swapChainImageViews[i]) != VK_SUCCESS) {[m
+[32m+[m[32m            std::cerr << "❌ Failed to create image view!\n";[m
+[32m+[m[32m            vkDestroyDevice(device);[m
+[32m+[m[32m            vkDestroySurfaceKHR(instance, surface, nullptr);[m
+[32m+[m[32m            vkDestroyInstance(instance);[m
+[32m+[m[32m            SDL_Quit();[m
+[32m+[m[32m            return 1;[m
+[32m+[m[32m        }[m
+     }[m
+ [m
+     // Render Pass[m
+[36m@@ -262,7 +318,10 @@[m [mint main(int argc, char* argv[]) {[m
+     renderPassInfo.pSubpasses = &subpass;[m
+ [m
+     VkRenderPass renderPass;[m
+[31m-    vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass);[m
+[32m+[m[32m    if (vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS) {[m
+[32m+[m[32m        std::cerr << "❌ Failed to create render pass!\n";[m
+[32m+[m[32m        return 1;[m
+[32m+[m[32m    }[m
+ [m
+     // Framebuffers[m
+     std::vector<VkFramebuffer> swapChainFramebuffers(swapChainImageViews.size());[m
+[36m@@ -277,7 +336,10 @@[m [mint main(int argc, char* argv[]) {[m
+         framebufferInfo.height = extent.height;[m
+         framebufferInfo.layers = 1;[m
+ [m
+[31m-        vkCreateFramebuffer(device, &framebufferInfo, nullptr, &swapChainFramebuffers[i]);[m
+[32m+[m[32m        if (vkCreateFramebuffer(device, &framebufferInfo, nullptr, &swapChainFramebuffers[i]) != VK_SUCCESS) {[m
+[32m+[m[32m            std::cerr << "❌ Failed to create framebuffer!\n";[m
+[32m+[m[32m            return 1;[m
+[32m+[m[32m        }[m
+     }[m
+ [m
+     // Command Pool & Buffer[m
+[36m@@ -287,7 +349,10 @@[m [mint main(int argc, char* argv[]) {[m
+     poolInfo.queueFamilyIndex = graphicsFamily;[m
+ [m
+     VkCommandPool commandPool;[m
+[31m-    vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool);[m
+[32m+[m[32m    if (vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {[m
+[32m+[m[32m        std::cerr << "❌ Failed to create command pool!\n";[m
+[32m+[m[32m        return 1;[m
+[32m+[m[32m    }[m
+ [m
+     VkCommandBufferAllocateInfo allocInfo{};[m
+     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;[m
+[36m@@ -296,11 +361,15 @@[m [mint main(int argc, char* argv[]) {[m
+     allocInfo.commandBufferCount = 1;[m
+ [m
+     VkCommandBuffer commandBuffer;[m
+[31m-    vkAllocateCommandBuffers(device, &allocInfo, &commandBuffer);[m
+[32m+[m[32m    if (vkAllocateCommandBuffers(device, &allocInfo, &commandBuffer) != VK_SUCCESS) {[m
+[32m+[m[32m        std::cerr << "❌ Failed to allocate command buffer!\n";[m
+[32m+[m[32m        return 1;[m
+[32m+[m[32m    }[m
+ [m
+     // Synchronization Semaphores & Fences[m
+[31m-    VkSemaphore imageAvailableSemaphore, renderFinishedSemaphore;[m
+[31m-    VkFence inFlightFence;[m
+[32m+[m[32m    VkSemaphore imageAvailableSemaphore{};[m
+[32m+[m[32m    VkSemaphore renderFinishedSemaphore{};[m
+[32m+[m[32m    VkFence inFlightFence{};[m
+ [m
+     VkSemaphoreCreateInfo semaphoreInfo{};[m
+     semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;[m
+[36m@@ -309,101 +378,316 @@[m [mint main(int argc, char* argv[]) {[m
+     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;[m
+     fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;[m
+ [m
+[31m-    vkCreateSemaphore(device, &semaphoreInfo, nullptr, &imageAvailableSemaphore);[m
+[31m-    vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphore);[m
+[31m-    vkCreateFence(device, &fenceInfo, nullptr, &inFlightFence);[m
+[32m+[m[32m    if (vkCreateSemaphore(device, &semaphoreInfo, nullptr, &imageAvailableSemaphore) != VK_SUCCESS ||[m
+[32m+[m[32m        vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphore) != VK_SUCCESS ||[m
+[32m+[m[32m        vkCreateFence(device, &fenceInfo, nullptr, &inFlightFence) != VK_SUCCESS) {[m
+[32m+[m[32m        std::cerr << "❌ Failed to create synchronization objects!\n";[m
+[32m+[m[32m        return 1;[m
+[32m+[m[32m    }[m
+ [m
+[31m-    std::cout << "🐰🥕 Render pipeline painted and ready! Entering display loop...\n";[m
+[32m+[m[32m    // Load mesh geometry from .pc file using mesh_loader.cpp[m
+[32m+[m[32m    std::string meshPath = "assets/meshes/terrain.pc";[m
+[32m+[m[41m    [m
+[32m+[m[32m    struct MeshData {[m
+[32m+[m[32m        std::vector<Vertex> vertices;[m
+[32m+[m[32m        std::vector<uint16_t> indices;[m
+[32m+[m[32m        bool valid = false;[m
+[32m+[m[32m    };[m
+ [m
+[31m-    // Main Loop[m
+[31m-    bool running = true;[m
+[31m-    SDL_Event event;[m
+[31m-    while (running) {[m
+[31m-        while (SDL_PollEvent(&event)) {[m
+[31m-            if (event.type == SDL_QUIT || (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_ESCAPE)) {[m
+[31m-                running = false;[m
+[31m-            }[m
+[32m+[m[32m    // Load mesh from disk using the mesh loader[m
+[32m+[m[32m    LoadedMesh loadedMesh;[m
+[32m+[m[32m    if (!blitz::loadFromDisk(loadedMesh, meshPath)) {[m
+[32m+[m[32m        std::cerr << "❌ Failed to load mesh from " << meshPath << "!";[m
+[32m+[m[32m        vkDestroyDevice(device, nullptr);[m
+[32m+[m[32m        vkDestroySurfaceKHR(instance, surface, nullptr);[m
+[32m+[m[32m        vkDestroyInstance(instance, nullptr);[m
+[32m+[m[32m        SDL_Quit();[m
+[32m+[m[32m        return 1;[m
+[32m+[m[32m    }[m
+[32m+[m[41m    [m
+[32m+[m[32m    std::cout << "📐 Loaded mesh: " << loadedMesh.vertices.size()[m[41m [m
+[32m+[m[32m              << " vertices, " << loadedMesh.indices.size()[m[41m [m
+[32m+[m[32m              << " indices" << std::endl;[m
+[32m+[m
+[32m+[m[32m    // Create vertex buffer from mesh vertices[m
+[32m+[m[32m    VkBuffer vertexBuffer = VK_NULL_HANDLE;[m
+[32m+[m[32m    VkDeviceMemory vertexBufferMemory = VK_NULL_HANDLE;[m
+[32m+[m[32m    VkDeviceSize vertexBufferSize = loadedMesh.vertices.size() * sizeof(Vertex);[m
+[32m+[m
+[32m+[m[32m    if (vertexBufferSize > 0) {[m
+[32m+[m[32m        VkBufferCreateInfo vertexBufInfo{};[m
+[32m+[m[32m        vertexBufInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;[m
+[32m+[m[32m        vertexBufInfo.size = vertexBufferSize;[m
+[32m+[m[32m        vertexBufInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;[m
+[32m+[m[32m        vertexBufInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;[m
+[32m+[m
+[32m+[m[32m        if (vkCreateBuffer(device, &vertexBufInfo, nullptr, &vertexBuffer) != VK_SUCCESS) {[m
+[32m+[m[32m            std::cerr << "❌ Failed to create vertex buffer!\n";[m
+[32m+[m[32m            return 1;[m
+         }[m
+ [m
+[31m-        vkWaitForFences(device, 1, &inFlightFence, VK_TRUE, UINT64_MAX);[m
+[31m-        vkResetFences(device, 1, &inFlightFence);[m
+[32m+[m[32m        VkMemoryRequirements vertexMemReqs{};[m
+[32m+[m[32m        vkGetBufferMemoryRequirements(device, vertexBuffer, &vertexMemReqs);[m
+[32m+[m
+[32m+[m[32m        VkMemoryAllocateInfo vertexAllocInfo{};[m
+[32m+[m[32m        vertexAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;[m
+[32m+[m[32m        vertexAllocInfo.allocationSize = vertexMemReqs.size;[m
+[32m+[m[32m        vertexAllocInfo.memoryTypeIndex = findMemoryType(device,[m[41m [m
+[32m+[m[32m            0, vertexMemReqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);[m
+[32m+[m
+[32m+[m[32m        if (vkAllocateMemory(device, &vertexAllocInfo, nullptr, &vertexBufferMemory) != VK_SUCCESS) {[m
+[32m+[m[32m            std::cerr << "❌ Failed to allocate vertex buffer memory!\n";[m
+[32m+[m[32m            return 1;[m
+[32m+[m[32m        }[m
+[32m+[m
+[32m+[m[32m        void* vertexData = nullptr;[m
+[32m+[m[32m        if (vkMapMemory(device, vertexBufferMemory, 0, vertexBufferSize, 0, &vertexData) != VK_SUCCESS) {[m
+[32m+[m[32m            std::cerr << "❌ Failed to map vertex buffer!\n";[m
+[32m+[m[32m            return 1;[m
+[32m+[m[32m        }[m
+[32m+[m
+[32m+[m[32m        memcpy(vertexData, loadedMesh.vertices.data(), vertexBufferSize);[m
+[32m+[m[32m        vkUnmapMemory(device, vertexBufferMemory);[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    // Create index buffer from mesh indices[m
+[32m+[m[32m    VkBuffer indexBuffer = VK_NULL_HANDLE;[m
+[32m+[m[32m    VkDeviceMemory indexBufferMemory = VK_NULL_HANDLE;[m
+[32m+[m[32m    VkDeviceSize indexBufferSize = loadedMesh.indices.size() * sizeof(uint16_t);[m
+[32m+[m
+[32m+[m[32m    if (indexBufferSize > 0) {[m
+[32m+[m[32m        VkBufferCreateInfo indexBufInfo{};[m
+[32m+[m[32m        indexBufInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;[m
+[32m+[m[32m        indexBufInfo.size = indexBufferSize;[m
+[32m+[m[32m        indexBufInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;[m
+[32m+[m[32m        indexBufInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;[m
+[32m+[m
+[32m+[m[32m        if (vkCreateBuffer(device, &indexBufInfo, nullptr, &indexBuffer) != VK_SUCCESS) {[m
+[32m+[m[32m            std::cerr << "❌ Failed to create index buffer!\n";[m
+[32m+[m[32m            return 1;[m
+[32m+[m[32m        }[m
+[32m+[m
+[32m+[m[32m        VkMemoryRequirements indexMemReqs{};[m
+[32m+[m[32m        vkGetBufferMemoryRequirements(device, indexBuffer, &indexMemReqs);[m
+[32m+[m
+[32m+[m[32m        VkMemoryAllocateInfo indexAllocInfo{};[m
+[32m+[m[32m        indexAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;[m
+[32m+[m[32m        indexAllocInfo.allocationSize = indexMemReqs.size;[m
+[32m+[m[32m        indexAllocInfo.memoryTypeIndex = findMemoryType(device,[m[41m [m
+[32m+[m[32m            0, indexMemReqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);[m
+ [m
+[31m-        uint32_t imageIndex;[m
+[31m-        vkAcquireNextImageKHR(device, swapChain, UINT64_MAX, imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);[m
+[32m+[m[32m        if (vkAllocateMemory(device, &indexAllocInfo, nullptr, &indexBufferMemory) != VK_SUCCESS) {[m
+[32m+[m[32m            std::cerr << "❌ Failed to allocate index buffer memory!\n";[m
+[32m+[m[32m            return 1;[m
+[32m+[m[32m        }[m
+ [m
+[31m-        vkResetCommandBuffer(commandBuffer, 0);[m
+[32m+[m[32m        void* indexData = nullptr;[m
+[32m+[m[32m        if (vkMapMemory(device, indexBufferMemory, 0, indexBufferSize, 0, &indexData) != VK_SUCCESS) {[m
+[32m+[m[32m            std::cerr << "❌ Failed to map index buffer!\n";[m
+[32m+[m[32m            return 1;[m
+[32m+[m[32m        }[m
+ [m
+[32m+[m[32m        memcpy(indexData, loadedMesh.indices.data(), indexBufferSize);[m
+[32m+[m[32m        vkUnmapMemory(device, indexBufferMemory);[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    // Create VulkanPipeline instance and initialize it[m
+[32m+[m[32m    blitz::VulkanPipeline pipeline;[m
+[32m+[m[32m    if (!pipeline.initialize(device, physicalDevice)) {[m
+[32m+[m[32m        std::cerr << "❌ Failed to initialize VulkanPipeline!\n";[m
+[32m+[m[32m        return 1;[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    // Load texture (placeholder for now)[m
+[32m+[m[32m    std::string texturePath = "assets/textures/taz.png";[m
+[32m+[m[32m    blitz::VulkanTexture texture;[m
+[32m+[m[32m    bool loadedTexture = false;[m
+[32m+[m[32m    if (!texturePath.empty()) {[m
+[32m+[m[32m        // Texture loading would happen here[m
+[32m+[m[32m        std::cout << "🖼️ Texture: " << texturePath << "\n";[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    // Main render loop[m
+[32m+[m[32m    SDL_Event e;[m
+[32m+[m[32m    while (!e.type == SDL_QUIT) {[m
+[32m+[m[32m        if (SDL_PollEvent(&e)) {[m
+[32m+[m[32m            if (e.type == SDL_QUIT) {[m
+[32m+[m[32m                break;[m
+[32m+[m[32m            }[m
+[32m+[m[32m        }[m
+[32m+[m
+[32m+[m[32m        vkResetFences(device, 1, &inFlightFence);[m
+[32m+[m
+[32m+[m[32m        // Start recording command buffer[m
+         VkCommandBufferBeginInfo beginInfo{};[m
+         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;[m
+[31m-        vkBeginCommandBuffer(commandBuffer, &beginInfo);[m
+ [m
+[31m-        VkRenderPassBeginInfo renderPassInfo{};[m
+[31m-        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;[m
+[31m-        renderPassInfo.renderPass = renderPass;[m
+[31m-        renderPassInfo.framebuffer = swapChainFramebuffers[imageIndex];[m
+[31m-        renderPassInfo.renderArea.offset = {0, 0};[m
+[31m-        renderPassInfo.renderArea.extent = extent;[m
+[32m+[m[32m        if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {[m
+[32m+[m[32m            std::cerr << "❌ Failed to begin recording command buffer!\n";[m
+[32m+[m[32m            return 1;[m
+[32m+[m[32m        }[m
+ [m
+[31m-        // Cozy burrow-blue / teal clear color![m
+[31m-        VkClearValue clearColor = {{{0.1f, 0.2f, 0.4f, 1.0f}}};[m
+[31m-        renderPassInfo.clearValueCount = 1;[m
+[31m-        renderPassInfo.pClearValues = &clearColor;[m
+[32m+[m[32m        // BEGIN RENDER PASS LOOP - Bind buffers and draw[m
+[32m+[m
+[32m+[m[32m        // Setup render area[m
+[32m+[m[32m        VkRect2D renderArea = {};[m
+[32m+[m[32m        renderArea.extent.width = extent.width;[m
+[32m+[m[32m        renderArea.extent.height = extent.height;[m
+[32m+[m
+[32m+[m[32m        // Begin render pass with proper struct and framebuffer[m
+[32m+[m[32m        VkRenderPassBeginInfo renderPassBeginInfo = {};[m
+[32m+[m[32m        renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;[m
+[32m+[m[32m        renderPassBeginInfo.renderPass = renderPass;[m
+[32m+[m[32m        renderPassBeginInfo.framebuffer = swapChainFramebuffers[0];[m
+[32m+[m[32m        renderPassBeginInfo.renderArea = renderArea;[m
+[32m+[m
+[32m+[m[32m        vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENT_AUTO);[m
+[32m+[m
+[32m+[m[32m        // Setup render area (viewport and scissor)[m
+[32m+[m[32m        VkViewport viewport{};[m
+[32m+[m[32m        viewport.x = 0.0f;[m
+[32m+[m[32m        viewport.y = 0.0f;[m
+[32m+[m[32m        viewport.width = static_cast<float>(extent.width);[m
+[32m+[m[32m        viewport.height = static_cast<float>(extent.height);[m
+[32m+[m[32m        viewport.minDepth = 0.0f;[m
+[32m+[m[32m        viewport.maxDepth = 1.0f;[m
+[32m+[m[32m        vkCmdSetViewport(commandBuffer, 0, 1, &viewport);[m
+[32m+[m
+[32m+[m[32m        VkRect2D scissor{};[m
+[32m+[m[32m        scissor.offset.x = 0;[m
+[32m+[m[32m        scissor.offset.y = 0;[m
+[32m+[m[32m        scissor.extent.width = extent.width;[m
+[32m+[m[32m        scissor.extent.height = extent.height;[m
+[32m+[m[32m        vkCmdSetScissor(commandBuffer, 0, 1, &scissor);[m
+[32m+[m
+[32m+[m[32m        // Bind vertex buffers using mesh loader data[m
+[32m+[m[32m        VkDeviceSize vertexOffsets{0};[m
+[32m+[m[32m        pipeline.bindVertexBuffers(commandBuffer, vertexBuffer, vertexOffsets);[m
+[32m+[m
+[32m+[m[32m        // Bind index buffer from mesh_loader indices[m
+[32m+[m[32m        pipeline.bindIndexBuffer(commandBuffer, indexBuffer, indexOffset);[m
+[32m+[m
+[32m+[m[32m        // Set viewport and scissor[m
+[32m+[m[32m        pipeline.setViewport(commandBuffer, extent.width, extent.height);[m
+[32m+[m
+[32m+[m[32m        // Set viewport and scissor again (pipeline function does this)[m
+[32m+[m[32m        pipeline.setViewport(commandBuffer, extent.width, extent.height);[m
+[32m+[m
+[32m+[m[32m        // Bind texture if available (placeholder - would use texture sampler/image in pipeline)[m
+[32m+[m[32m        // VkImageView textureView; // Would be set here when texture is loaded[m
+[32m+[m
+[32m+[m[32m        // Draw the mesh using vkCmdDrawIndexed with actual geometry data from mesh_loader[m
+[32m+[m[32m        if (loadedMesh.indices.size() > 0) {[m
+[32m+[m[32m            uint32_t indexCount = static_cast<uint32_t>(loadedMesh.indices.size());[m
+[32m+[m[32m            uint32_t vertexOffset = 0;[m
+[32m+[m[32m            VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;[m
+[32m+[m[41m            [m
+[32m+[m[32m            // Perform the actual draw call for 3D geometry rendering[m
+[32m+[m[32m            vkCmdDrawIndexed(commandBuffer, indexCount, 1, vertexOffset, 0, topology);[m
+[32m+[m[32m            std::cout << "🎨 Rendered: " << indexCount << " triangles from mesh geometry" << std::endl;[m
+[32m+[m[32m        }[m
+ [m
+[31m-        vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);[m
+[32m+[m[32m        // End render pass[m
+         vkCmdEndRenderPass(commandBuffer);[m
+[31m-        vkEndCommandBuffer(commandBuffer);[m
+ [m
+[32m+[m[32m        // Transition swap chain image to present source layout for presentation[m
+[32m+[m[32m        VkImageMemoryBarrier barrier = {};;[m
+[32m+[m[32m        barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;[m
+[32m+[m[32m        barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;[m
+[32m+[m[32m        barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;[m
+[32m+[m[32m        barrier.image = swapChainImages[0];[m
+[32m+[m[32m        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;[m
+[32m+[m[32m        barrier.subresourceRange.levelCount = 1;[m
+[32m+[m[32m        barrier.subresourceRange.layerCount = 1;[m
+[32m+[m[32m        barrier.srcAccessMask = 0;[m
+[32m+[m[32m        barrier.dstAccessMask = VK_ACCESS_COLOR_READ_AND_WRITE_BIT_KHR;[m
+[32m+[m
+[32m+[m[32m        vkCmdPipelineBarrier(commandBuffer,[m
+[32m+[m[32m            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,[m
+[32m+[m[32m            VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,[m
+[32m+[m[32m            0,[m
+[32m+[m[32m            0, nullptr,[m
+[32m+[m[32m            0, nullptr,[m
+[32m+[m[32m            &barrier);[m
+[32m+[m
+[32m+[m[32m        // Submit command buffer for execution[m
+         VkSubmitInfo submitInfo{};[m
+         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;[m
+ [m
+[31m-        VkSemaphore waitSemaphores[] = {imageAvailableSemaphore};[m
+[31m-        VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};[m
+[31m-        submitInfo.waitSemaphoreCount = 1;[m
+[31m-        submitInfo.pWaitSemaphores = waitSemaphores;[m
+[31m-        submitInfo.pWaitDstStageMask = waitStages;[m
+[32m+[m[32m        VkPipelineStageFlags waitStages = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;[m
+[32m+[m[32m        submitInfo.waitSemaphoreCount = 2;[m
+[32m+[m[32m        submitInfo.pWaitSemaphores = &imageAvailableSemaphore;[m
+[32m+[m[32m        submitInfo.pWaitDstStageMask = &waitStages;[m
+[32m+[m
+         submitInfo.commandBufferCount = 1;[m
+         submitInfo.pCommandBuffers = &commandBuffer;[m
+ [m
+[31m-        VkSemaphore signalSemaphores[] = {renderFinishedSemaphore};[m
+         submitInfo.signalSemaphoreCount = 1;[m
+[31m-        submitInfo.pSignalSemaphores = signalSemaphores;[m
+[31m-[m
+[31m-        vkQueueSubmit(graphicsQueue, 1, &submitInfo, inFlightFence);[m
+[31m-[m
+[31m-        VkPresentInfoKHR presentInfo{};[m
+[31m-        presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;[m
+[31m-        presentInfo.waitSemaphoreCount = 1;[m
+[31m-        presentInfo.pWaitSemaphores = signalSemaphores;[m
+[31m-[m
+[31m-        VkSwapchainKHR swapChains[] = {swapChain};[m
+[31m-        presentInfo.swapchainCount = 1;[m
+[31m-        presentInfo.pSwapchains = swapChains;[m
+[31m-        presentInfo.pImageIndices = &imageIndex;[m
+[32m+[m[32m        submitInfo.pSignalSemaphores = &renderFinishedSemaphore;[m
+[32m+[m[41m        [m
+[32m+[m[32m        VkFence waitFence = {};[m
+[32m+[m[32m        waitFence.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;[m
+[32m+[m
+[32m+[m[32m        if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, waitFence) != VK_SUCCESS) {[m
+[32m+[m[32m            std::cerr << "❌ Failed to submit draw command!\n";[m
+[32m+[m[32m            return 1;[m
+[32m+[m[32m        }[m
+ [m
+[31m-        vkQueuePresentKHR(graphicsQueue, &presentInfo);[m
+[32m+[m[32m        // Present swap chain image[m
+[32m+[m[32m        if (swapChain != VK_NULL_HANDLE) {[m
+[32m+[m[32m            VkPresentInfoKHR presentInfo = {};[m
+[32m+[m[32m            presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;[m
+[32m+[m[32m            presentInfo.waitSemaphoreCount = 1;[m
+[32m+[m[32m            presentInfo.pWaitSemaphores = &renderFinishedSemaphore;[m
+[32m+[m[32m            presentInfo.swapchainCount = 1;[m
+[32m+[m[32m            presentInfo.pSwapchains = &swapChain;[m
+[32m+[m[32m            uint32_t imageIndex = 0;[m
+[32m+[m[32m            presentInfo.pImageIndices = &imageIndex;[m
+[32m+[m
+[32m+[m[32m            if (vkQueuePresentKHR(graphicsQueue, &presentInfo) != VK_SUCCESS) {[m
+[32m+[m[32m                std::cerr << "❌ Failed to present image!\n";[m
+[32m+[m[32m            }[m
+[32m+[m[32m        } else {[m
+[32m+[m[32m            // No swapchain - demo mode or error, just complete the frame[m
+[32m+[m[32m            std::cout << "⚠️  Swapchain not available - running in demo mode (no present)\n";[m
+[32m+[m[32m        }[m
+[32m+[m[41m        [m
+[32m+[m[32m        if (vkQueuePresentKHR(graphicsQueue, &presentInfo) != VK_SUCCESS) {[m
+[32m+[m[32m            std::cerr << "❌ Failed to present image!\n";[m
+[32m+[m[32m        }[m
+[32m+[m[41m            [m
+[32m+[m[32m            if (vkQueuePresentKHR(graphicsQueue, &presentInfo) != VK_SUCCESS) {[m
+[32m+[m[32m                std::cerr << "❌ Failed to present image!\n";[m
+[32m+[m[32m            }[m
+[32m+[m[32m        } else {[m
+[32m+[m[32m            // No swapchain - demo mode or error, just complete the frame[m
+[32m+[m[32m            std::cout << "⚠️  Swapchain not available - running in demo mode (no present)\n";[m
+[32m+[m[32m        }[m
+[32m+[m[41m        [m
+[32m+[m[32m        if (vkQueuePresentKHR(graphicsQueue, &presentInfo) != VK_SUCCESS) {[m
+[32m+[m[32m            std::cerr << "❌ Failed to present image!\n";[m
+[32m+[m[32m        }[m
+     }[m
+ [m
+[31m-    vkDeviceWaitIdle(device);[m
+[31m-[m
+     // Cleanup[m
+[31m-    vkDestroySemaphore(device, imageAvailableSemaphore, nullptr);[m
+[31m-    vkDestroySemaphore(device, renderFinishedSemaphore, nullptr);[m
+[31m-    vkDestroyFence(device, inFlightFence, nullptr);[m
+[32m+[m[32m    pipeline.destroy();[m
+[32m+[m[32m    vkFreeMemory(device, vertexBufferMemory, nullptr);[m
+[32m+[m[32m    vkDestroyBuffer(device, vertexBuffer, nullptr);[m
+[32m+[m[32m    vkFreeMemory(device, indexBufferMemory, nullptr);[m
+[32m+[m[32m    vkDestroyBuffer(device, indexBuffer, nullptr);[m
+     vkDestroyCommandPool(device, commandPool, nullptr);[m
+[31m-    for (auto framebuffer : swapChainFramebuffers) {[m
+[31m-        vkDestroyFramebuffer(device, framebuffer, nullptr);[m
+[31m-    }[m
+     vkDestroyRenderPass(device, renderPass, nullptr);[m
+[31m-    for (auto imageView : swapChainImageViews) {[m
+[31m-        vkDestroyImageView(device, imageView, nullptr);[m
+[32m+[m[32m    for (size_t i = 0; i < swapChainImageViews.size(); i++) {[m
+[32m+[m[32m        vkDestroyImageView(device, swapChainImageViews[i], nullptr);[m
+     }[m
+     vkDestroySwapchainKHR(device, swapChain, nullptr);[m
+     vkDestroyDevice(device, nullptr);[m
+     vkDestroySurfaceKHR(instance, surface, nullptr);[m
+[32m+[m[32m    vkDestroySemaphore(device, imageAvailableSemaphore, nullptr);[m
+[32m+[m[32m    vkDestroySemaphore(device, renderFinishedSemaphore, nullptr);[m
+[32m+[m[32m    vkDestroyFence(device, inFlightFence, nullptr);[m
+     vkDestroyInstance(instance, nullptr);[m
+[31m-    SDL_DestroyWindow(window);[m
+     SDL_Quit();[m
+ [m
+[31m-    std::cout << "🌿 Window closed cleanly. Sweet burrow dreams!\n";[m
+     return 0;[m
+[31m-}[m
+\ No newline at end of file[m
+[32m+[m[32m}[m

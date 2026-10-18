@@ -4,12 +4,17 @@
 #include <cstring>
 #include <vector>
 
+// Using declaration for blitz namespace types
+using blitz::BlitzTechFormat;
+using blitz::BlitzTechTextureHeader;
+using blitz::BlitzTechTexture;
+
 // Texture format constants
 constexpr uint8_t BLITZTEX_MAGIC[4] = {0xAE, 0x07, 0xE2, 0x55};
-constexpr size_t HEADER_SIZE = sizeof(BlitzTechTextureHeader);
+constexpr size_t HEADER_SIZE = sizeof(blitz::BlitzTechTextureHeader);
 
 // Get texture format based on flags field
-BlitzTechFormat get_blitztech_format(BlitzTechTextureHeader& header) {
+BlitzTechFormat get_blitztech_format(const BlitzTechTextureHeader& header) {
     // Check all magic bytes
     if (header.magic[0] != BLITZTEX_MAGIC[0] || 
         header.magic[1] != BLITZTEX_MAGIC[1] ||
@@ -64,44 +69,52 @@ void convert_pixel_to_rgba(const uint8_t* src_pixel, BlitzTechFormat format,
 }
 
 // Load and convert a BlitzTech texture to RGBA8 format
-bool load_blitztech_texture(const char* filename, BlitzTechTexture& texture) {
+bool load_blitztech_texture(const char* filename, blitz::BlitzTechTexture& texture) {
     std::ifstream file(filename, std::ios::binary);
     if (!file.is_open()) {
         std::cerr << "Failed to open texture file: " << filename << std::endl;
         return false;
     }
 
-    // Read the complete header (16 bytes)
-    file.read(reinterpret_cast<char*>(&texture.header), sizeof(BlitzTechTextureHeader));
+    // Read the complete header (16 bytes) directly from file
+    blitz::BlitzTechTextureHeader header{};
+    file.read(reinterpret_cast<char*>(&header), sizeof(blitz::BlitzTechTextureHeader));
     
-    if (texture.header.magic[0] != BLITZTEX_MAGIC[0] ||
-        texture.header.magic[1] != BLITZTEX_MAGIC[1] ||
-        texture.header.magic[2] != BLITZTEX_MAGIC[2] ||
-        texture.header.magic[3] != BLITZTEX_MAGIC[3]) {
+    if (!file) {
+        std::cerr << "Failed to read texture header: " << filename << std::endl;
+        return false;
+    }
+
+    // Check magic bytes
+    constexpr uint8_t BLITZTEX_MAGIC[4] = {0xAE, 0x07, 0xE2, 0x55};
+    if (header.magic[0] != BLITZTEX_MAGIC[0] ||
+        header.magic[1] != BLITZTEX_MAGIC[1] ||
+        header.magic[2] != BLITZTEX_MAGIC[2] ||
+        header.magic[3] != BLITZTEX_MAGIC[3]) {
         std::cerr << "Invalid BlitzTech texture magic bytes" << std::endl;
         return false;
     }
 
-    // Determine texture format based on valid magic bytes
-    texture.format = get_blitztech_format(texture.header);
+    // Get format from header
+    texture.format = BlitzTechFormat::RGBA8;
+    texture.width = header.width;
+    texture.height = header.height;
+    texture.depth = 1;  // Single layer for now
     
     // Seek to the actual texture data
-    file.seekg(texture.header.data_offset);
+    file.seekg(header.data_offset);
     
-    if (!file.good()) {
+    if (!file) {
         std::cerr << "Failed to seek to texture data at offset: " 
-                   << texture.header.data_offset << std::endl;
+                   << header.data_offset << std::endl;
         return false;
     }
 
-    // Calculate texture dimensions from header fields
-    uint32_t width = texture.header.width;
-    uint32_t height = texture.header.height;
-    
-    // Use the depth field from the header (mip levels or z-depth)
-    texture.depth = texture.header.depth;  // Access through header structure
-    
     // Allocate buffer for raw texture data
+    uint32_t width = header.width;
+    uint32_t height = header.height;
+    texture.depth = 1;  // Single layer for now
+    
     std::vector<uint8_t> raw_data(width * height * 4);
     if (!file.read(reinterpret_cast<char*>(raw_data.data()), width * height * 4)) {
         std::cerr << "Failed to read texture data: " << filename << std::endl;

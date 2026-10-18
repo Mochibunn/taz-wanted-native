@@ -1,0 +1,104 @@
+        // Bind vertex buffer from parsed mesh data
+        VkBuffer vertex_buffer = VK_NULL_HANDLE;
+        VkDeviceMemory vertex_memory = VK_NULL_HANDLE;
+
+        if (mesh.vertices.size() > 0) {
+            VkBufferCreateInfo vert_info{};
+            vert_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+            vert_info.size = static_cast<uint32_t>(mesh.vertices.size() * sizeof(Vertex));
+            vert_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+            vert_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+            vkCreateBuffer(device, &vert_info, nullptr, &vertex_buffer);
+
+            VkMemoryAllocateInfo mem_alloc{
+                VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+                nullptr,
+                &vert_info.size
+            };
+            mem_alloc.memoryTypeIndex = findMemoryType(
+                device,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+            );
+
+            vkAllocateMemory(device, &mem_alloc, nullptr, &vertex_memory);
+            vkBindBufferMemory(device, vertex_buffer, vertex_memory, 0);
+
+            void* mapped;
+            vkMapMemory(device, vertex_memory, 0, UINT64_MAX, 0, reinterpret_cast<void**>(&mapped));
+
+            // Copy vertex data properly
+            const Vertex* vertex_data = mesh.vertices.data();
+            memcpy(mapped, vertex_data, vert_info.size);
+
+            vkUnmapMemory(device, vertex_memory);
+
+            VkBuffer vertex_buffers[2] = {vertex_buffer, VK_NULL_HANDLE};
+            uint32_t offset = 0;
+
+            // Bind vertex buffer in render pass loop
+            if (vertex_buffer != VK_NULL_HANDLE) {
+                vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertex_buffers, &offset);
+            }
+        } else {
+            std::cout << "⚠️ No vertices to bind." << std::endl;
+        }
+
+        // Bind index buffer from parsed mesh indices
+        VkBuffer index_buffer = VK_NULL_HANDLE;
+        VkDeviceMemory index_memory = VK_NULL_HANDLE;
+
+        if (mesh.indices.size() > 0) {
+            VkBufferCreateInfo ind_info{};
+            ind_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+            ind_info.size = static_cast<uint32_t>(mesh.indices.size() * sizeof(uint16_t));
+            ind_info.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+            ind_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+            vkCreateBuffer(device, &ind_info, nullptr, &index_buffer);
+
+            VkMemoryAllocateInfo mem_alloc{
+                VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+                nullptr,
+                &ind_info.size
+            };
+            mem_alloc.memoryTypeIndex = findMemoryType(
+                device,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+            );
+
+            vkAllocateMemory(device, &mem_alloc, nullptr, &index_memory);
+            vkBindBufferMemory(device, index_buffer, index_memory, 0);
+
+            // Copy index data properly
+            const uint16_t* index_data = mesh.indices.data();
+            void* mapped;
+            vkMapMemory(device, index_memory, 0, UINT64_MAX, 0, reinterpret_cast<void**>(&mapped));
+            memcpy(mapped, index_data, ind_info.size);
+            vkUnmapMemory(device, index_memory);
+
+            // Bind index buffer in render pass loop
+            uint32_t offset = 0;
+            if (index_buffer != VK_NULL_HANDLE) {
+                vkCmdBindIndexBuffer(commandBuffer, index_buffer, offset, VK_INDEX_TYPE_UINT16);
+            }
+        } else {
+            std::cout << "⚠️ No indices to bind." << std::endl;
+        }
+
+        // Draw indexed primitives if we have both buffers bound
+        uint32_t index_count = mesh.indices.size();
+        VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+
+        if (vertex_buffer != VK_NULL_HANDLE && index_buffer != VK_NULL_HANDLE) {
+            vkCmdDrawIndexed(commandBuffer, index_count, 1, 0, 0, topology);
+            std::cout << "🐰 Rendering geometry: " << index_count << " indices." << std::endl;
+        } else if (index_buffer != VK_NULL_HANDLE) {
+            std::cout << "⚠️ Vertex buffer not bound, skipping draw." << std::endl;
+        }
+
+        // End render pass and command buffer - BEFORE clear color setup
+        vkCmdEndRenderPass(commandBuffer);
+        if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
+            std::cerr << "Failed to record command buffer!" << std::endl;
+        }

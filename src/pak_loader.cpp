@@ -28,7 +28,7 @@ bool PakLoader::isValid(const std::string& filepath) {
 }
 
 // Parse header and extract file entries from a .pc file data buffer
-std::vector<PakLoader::FileEntry> PakLoader::parseHeader(const std::vector<uint8_t>& data) {
+std::vector<FileEntry> PakLoader::parseHeader(const std::vector<uint8_t>& data) {
     std::vector<FileEntry> entries;
     
     // Verify magic bytes: C6 59 60 24

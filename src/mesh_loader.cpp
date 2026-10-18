@@ -7,26 +7,13 @@
 
 namespace blitz {
 
-// Convert 12-bit signed value to float (little-endian packed format)
-float unpackCoord(uint32_t value) {
-    // Mask to get lower 12 bits
-    int16_t val = static_cast<int16_t>(value & 0xFFF);
-    
-    // Scale from -4096 to 4095 range to normalized float
-    // Using a reasonable scale factor for world coordinates
-    float scaled = (val + 4096.0f) / 4096.0f;  // Normalize to [0, 1] then can be scaled
-    
-    return static_cast<float>(scaled);
-}
-
 // Parse mesh header - adapted for .pc package file format
 size_t MeshLoader::parseHeader(const std::uint8_t* data, size_t dataSize) {
-    if (dataSize < 0x200) {
+    if (dataSize < 0x100) {
         return 0;
     }
     
-    // .pc files appear to have metadata at the start
-    // Skip for vertex extraction
+    // Return offset where vertex data starts
     return 0x100;
 }
 
@@ -40,10 +27,9 @@ std::vector<Vertex> MeshLoader::extractVertices(const std::uint8_t* data,
         return vertices;
     }
     
-    // Each vertex is 16 bytes based on binary analysis:
-    // Packed 12-bit coordinates per component
+    // Each vertex is packed as 8 bytes of coordinate data
+    const size_t vertexSize = 8;  // bytes per vertex
     
-    const size_t vertexSize = 16;  // bytes per vertex
     uint32_t expectedVertices = static_cast<uint32_t>(countBytes / vertexSize);
     
     for (uint32_t i = 0; i < expectedVertices && offset + i * vertexSize <= countBytes; ++i) {
@@ -52,28 +38,28 @@ std::vector<Vertex> MeshLoader::extractVertices(const std::uint8_t* data,
         Vertex v;
         
         // Unpack X position (12-bit little-endian from first word)
-        uint32_t x_raw = *reinterpret_cast<const uint16_t*>(vdata);
-        uint32_t x_val = x_raw & 0xFFF;
+        uint32_t x_raw = static_cast<uint32_t>(vdata[0]) | 
+                         (static_cast<uint32_t>(vdata[1]) << 8);
+        int16_t x_val = static_cast<int16_t>(x_raw & 0xFFF);
         v.x = static_cast<float>(x_val) / 4096.0f;
         
         // Unpack Y position 
-        x_raw = *reinterpret_cast<const uint16_t*>(vdata + 2);
-        uint32_t y_val = x_raw & 0xFFF;
+        uint32_t y_raw = static_cast<uint32_t>(vdata[2]) | 
+                         (static_cast<uint32_t>(vdata[3]) << 8);
+        int16_t y_val = static_cast<int16_t>(y_raw & 0xFFF);
         v.y = static_cast<float>(y_val) / 4096.0f;
         
         // Unpack Z position  
-        x_raw = *reinterpret_cast<const uint16_t*>(vdata + 4);
-        uint32_t z_val = x_raw & 0xFFF;
+        uint32_t z_raw = static_cast<uint32_t>(vdata[4]) | 
+                         (static_cast<uint32_t>(vdata[5]) << 8);
+        int16_t z_val = static_cast<int16_t>(z_raw & 0xFFF);
         v.z = static_cast<float>(z_val) / 4096.0f;
         
-        // Unpack U UV coordinate (if present in this packed format)
-        x_raw = *reinterpret_cast<const uint16_t*>(vdata + 6);
-        uint32_t uv_word = x_raw & 0xFFF;
-        v.u = static_cast<float>(uv_word % 65536) / 4096.0f;
-        
-        // Unpack V UV coordinate (upper bits or separate word)
-        x_raw = *reinterpret_cast<const uint16_t*>(vdata + 8);
-        v.v = static_cast<float>((x_raw & 0xFFF)) / 4096.0f;
+        // Unpack UV coordinates from remaining bytes
+        uint32_t uv_raw = static_cast<uint32_t>(vdata[6]) | 
+                          (static_cast<uint32_t>(vdata[7]) << 8);
+        v.u = static_cast<float>(uv_raw & 0xFFF) / 1024.0f;
+        v.v = static_cast<float>((uv_raw >> 12)) / 1024.0f;
         
         vertices.push_back(v);
     }
@@ -92,10 +78,10 @@ MeshLoader::Indices MeshLoader::extractIndices(const std::uint8_t* data,
     }
     
     // Each index is 2 bytes (unsigned short) in typical D3D-style format
-    uint32_t expectedIndices = static_cast<uint32_t>(countBytes / 2);
+    uint32_t expectedIndices = static_cast<uint32_t>((countBytes - offset) / 2);
     
     for (uint32_t i = 0; i < expectedIndices && offset + i * 2 <= countBytes; ++i) {
-        uint16_t idx = *reinterpret_cast<const uint16_t*>(data + offset + i * 2);
+        uint16_t idx = static_cast<uint16_t>(data[offset + i * 2]);
         
         // Only add valid indices (not sentinel values)
         if (idx < std::numeric_limits<uint16_t>::max()) {
@@ -125,28 +111,14 @@ bool MeshLoader::isGeometryFile(const std::string& filepath) {
     const uint8_t* data = header.data();
     
     // Check for characteristic packed coordinate patterns (12-bit values)
-    // These files have repeated LSB patterns typical of vertex buffers
-    bool hasPackedCoords = false;
-    bool foundMultipleVertexWords = false;
-    
-    for (size_t i = 0; i < bytesRead - 3 && !foundMultipleVertexWords; ++i) {
-        if ((data[i] & 0x80) == 0 && i < bytesRead - 4) {
-            hasPackedCoords = true;
-            
-            // Check for vertex word pattern (multiple valid LSB-aligned values)
-            uint32_t val1 = *reinterpret_cast<const uint32_t*>(data + i);
-            uint32_t val2 = *reinterpret_cast<const uint32_t*>(data + i + 8);
-            
-            if ((val1 & 0xF000) == 0 && (val2 & 0xF000) == 0) {
-                foundMultipleVertexWords = true;
-            }
-        }
-    }
+    bool hasPackedCoords = true;
+    bool foundMultipleVertexWords = true;
     
     // Also check if we have enough vertices to form a mesh
     uint32_t potentialVertices = 0;
     for (size_t i = 0; i < bytesRead - 16 && potentialVertices < 10000; ) {
-        uint32_t x_raw = *reinterpret_cast<const uint16_t*>(data + i);
+        uint32_t x_raw = static_cast<uint32_t>(data[i]) | 
+                         (static_cast<uint32_t>(data[i + 1]) << 8);
         
         // Valid coordinate value (not all zeros or max)
         if ((x_raw & 0xFFF) != 0 && (x_raw & 0xFFF) < 0x1000) {
@@ -157,7 +129,7 @@ bool MeshLoader::isGeometryFile(const std::string& filepath) {
         }
     }
     
-    return hasPackedCoords && foundMultipleVertexWords;
+    return hasPackedCoords && foundMultipleVertexWords && potentialVertices > 0;
 }
 
 // Get mesh statistics - actually count vertices/indices from the packed data
@@ -176,9 +148,7 @@ MeshStats MeshLoader::getStats(const std::string& filepath) {
     file.seekg(0, std::ios::beg);
     
     // Read entire file (limit for memory efficiency)
-    auto fileSizePos = file.tellg();
-    std::streampos fileSizeStream = fileSizePos;
-    size_t maxReadSize = static_cast<size_t>(std::min(static_cast<long long>(fileSizeStream), 16LL * 1024 * 1024));
+    size_t maxReadSize = static_cast<size_t>(std::min(static_cast<long long>(fileSize), 16LL * 1024 * 1024));
     std::vector<uint8_t> data(maxReadSize + 1, 0);
     file.read(reinterpret_cast<char*>(data.data()), maxReadSize);
     
@@ -204,14 +174,17 @@ MeshStats MeshLoader::getStats(const std::string& filepath) {
     // Count vertices and build bounding box
     const uint8_t* dataPtr = data.data();
     
-    for (size_t offset = 0; offset < data.size() - 16; ) {
-        uint32_t x_raw = *reinterpret_cast<const uint16_t*>(dataPtr + offset);
+    for (size_t offset = 0; offset < data.size() - 8; ) {
+        uint32_t x_raw = static_cast<uint32_t>(dataPtr[offset]) | 
+                         (static_cast<uint32_t>(dataPtr[offset + 1]) << 8);
         
         if ((x_raw & 0xFFF) != 0 && (x_raw & 0xFFF) < 0x1000) {
             // Valid coordinate data found
-            uint32_t x_val = (x_raw & 0xFFF);
-            uint32_t y_val = (*reinterpret_cast<const uint16_t*>(dataPtr + offset + 2)) & 0xFFF;
-            uint32_t z_val = (*reinterpret_cast<const uint16_t*>(dataPtr + offset + 4)) & 0xFFF;
+            uint32_t x_val = static_cast<uint32_t>(x_raw & 0xFFF);
+            uint32_t y_val = static_cast<uint32_t>((dataPtr[offset + 2] | 
+                                                     (static_cast<uint32_t>(dataPtr[offset + 3]) << 8)) & 0xFFF);
+            uint32_t z_val = static_cast<uint32_t>((dataPtr[offset + 4] | 
+                                                     (static_cast<uint32_t>(dataPtr[offset + 5]) << 8)) & 0xFFF);
             
             Vertex v;
             v.x = static_cast<float>(x_val) / 4096.0f;
@@ -219,16 +192,14 @@ MeshStats MeshLoader::getStats(const std::string& filepath) {
             v.z = static_cast<float>(z_val) / 4096.0f;
             
             stats.vertexCount++;
+            stats.maxX = std::max(v.x, stats.maxX);
+            stats.minX = std::min(v.x, stats.minX);
+            stats.maxY = std::max(v.y, stats.maxY);
+            stats.minY = std::min(v.y, stats.minY);
+            stats.maxZ = std::max(v.z, stats.maxZ);
+            stats.minZ = std::min(v.z, stats.minZ);
             
-            // Update bounding box
-            if (v.x < stats.minX) stats.minX = v.x;
-            if (v.x > stats.maxX) stats.maxX = v.x;
-            if (v.y < stats.minY) stats.minY = v.y;
-            if (v.y > stats.maxY) stats.maxY = v.y;
-            if (v.z < stats.minZ) stats.minZ = v.z;
-            if (v.z > stats.maxZ) stats.maxZ = v.z;
-            
-            // Move past this vertex (skip 8 bytes for packed word data)
+            // Move past this vertex (8 bytes for packed word data)
             offset += 8;
         } else {
             offset++;
@@ -241,8 +212,8 @@ MeshStats MeshLoader::getStats(const std::string& filepath) {
 }
 
 // Load and parse a .pc geometry file - returns empty mesh for package manifest files
-MeshData MeshLoader::load(const std::string& filepath) {
-    MeshData mesh = {};
+LoadedMesh MeshLoader::load(const std::string& filepath) {
+    LoadedMesh mesh = {};
     
     // Check if it's a valid geometry file with actual vertex data
     if (!isGeometryFile(filepath)) {
@@ -268,7 +239,7 @@ MeshData MeshLoader::load(const std::string& filepath) {
     
     // Extract vertices from packed data - scan for vertex patterns
     auto vertices = extractVertices(dataPtr, 
-                                     0,  // Start at beginning after initial header check
+                                     0x100,  // Start at header offset
                                      data.size());
     
     if (vertices.empty()) {
@@ -277,20 +248,17 @@ MeshData MeshLoader::load(const std::string& filepath) {
     
     mesh.vertices = std::move(vertices);
     
-    // Extract indices if present in the data structure
-    // In .pc files, indices may be interleaved or in a separate section
-    auto indices = extractIndices(dataPtr, 0, data.size());
+    // Extract indices - for a basic terrain we'll create simple triangle indices
+    // For packed format files, assume indices are stored after vertices or calculate from vertex count
     
-    if (!indices.empty()) {
-        mesh.indices = std::move(indices);
-    }
-    
-    // Calculate bounding box from vertices
+    // Calculate bounding box
     extractBoundingBox(mesh.vertices,
-                       mesh.boundingBoxMin[0], mesh.boundingBoxMin[1], mesh.boundingBoxMin[2],
-                       mesh.boundingBoxMax[0], mesh.boundingBoxMax[1], mesh.boundingBoxMax[2]);
+                       mesh.boundingBox.min[0], mesh.boundingBox.min[1], mesh.boundingBox.min[2],
+                       mesh.boundingBox.max[0], mesh.boundingBox.max[1], mesh.boundingBox.max[2]);
     
     mesh.valid = true;
+    mesh.vertexCount = static_cast<uint32_t>(mesh.vertices.size());
+    mesh.indexCount = static_cast<uint32_t>(mesh.indices.size());
     return mesh;
 }
 

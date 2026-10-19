@@ -1,0 +1,122 @@
+digraph DirectXGraphicsPipeline {
+    rankdir=TB;
+    node [shape=box, style=filled];
+    
+    // Entry points layer
+    node [fillcolor="#e1f5fe", fontcolor="blue"];
+    subgraph cluster_entry {
+        label="Entry Points";
+        entry1 [label="DirectDrawCreateEx()\nInitialize Rendering Device"];
+        entry2 [label="D3DCreate7()\nSetup Vertex Pipeline"];
+        entry3 [label="DirectPlayCreate()\nNetwork Session Init"];
+        
+        entry1 -> render_layer;
+        entry2 -> render_layer;
+        entry3 -> network_layer;
+    }
+    
+    // Rendering subsystem
+    node [fillcolor="#fff3e0", fontcolor="orange"];
+    subgraph cluster_render {
+        label="Direct3D 7 Rendering Core";
+        render_layer [label="Device Context\n(Implicit via DDCreateEx)"];
+        
+        render_layer -> surface_mgr;
+        render_layer -> texture_bind;
+        render_layer -> vertex_transform;
+        
+        surface_mgr [label="Surface Manager\n(Backbuffer/ZBuffer/Texture)"];
+        texture_bind [label="Texture Binding\n(State Caching)"];
+        vertex_transform [label="Vertex Transform\n(Vertex Shader Emulation)"];
+    }
+    
+    // Rasterization pipeline
+    node [fillcolor="#f3e5f5", fontcolor="purple"];
+    subgraph cluster_raster {
+        label="Rasterization & Output";
+        raster_layer [label="Rasterization Engine"];
+        
+        surface_mgr -> raster_layer;
+        texture_bind -> raster_layer;
+        vertex_transform -> raster_layer;
+        
+        raster_layer -> output;
+        
+        output [label="Output Merger\n(Depth/Stencil Test\nColor Blending)"];
+    }
+    
+    // Surface subsystem
+    node [fillcolor="#e8f5e9", fontcolor="green"];
+    subgraph cluster_surface {
+        label="Surface/Texture Management";
+        
+        surface_mgr -> ddheap;
+        texture_bind -> texcache;
+        
+        ddheap [label="DirectDraw Heap\n(System Memory Pool)"];
+        texcache [label="Texture State Cache\n(Filter Mode/Palette Cache)"];
+    }
+    
+    // Network subsystem
+    node [fillcolor="#ffebee", fontcolor="red"];
+    subgraph cluster_network {
+        label="DirectPlay Networking";
+        
+        network_layer -> lobby;
+        network_layer -> session;
+        
+        lobby [label="Game Lobby\n(Matchmaking/Friends)"];
+        session [label="Session Manager\n(State Synchronization)"];
+    }
+    
+    // Audio subsystem
+    node [fillcolor="#fce4ec", fontcolor="pink"];
+    subgraph cluster_audio {
+        label="DirectSound Audio";
+        
+        audio_layer [label="Sound Device Manager"];
+        
+        audio_layer -> capture;
+        audio_layer -> playback;
+        
+        capture [label="Capture Pipeline\n(Microphone Input)"];
+        playback [label="Playback Pipeline\n(Soundcard Buffer)"];
+    }
+    
+    // Utilities layer
+    node [fillcolor="#eceff1", fontcolor="gray"];
+    subgraph cluster_utils {
+        label="D3DRM Mathematics Utilities";
+        
+        math_layer [label="Mathematics Library"];
+        
+        math_layer -> quat;
+        math_layer -> vector;
+        math_layer -> color;
+        
+        quat [label="Quaternion Operations\n(Rotation/Slerp/Multiply)"];
+        vector [label="Vector Math\n(Reflect/Rotate/Modulus)"];
+        color [label="Color Utilities\n(GetAlpha/Red/Green/Blue)"];
+    }
+    
+    // State machine transitions
+    {rank=same; surface_mgr texture_bind vertex_transform}
+    {rank=same; ddheap texcache}
+    
+    // Flow arrows for rendering pass
+    entry1 -> render_layer [label="Device\nInitialization"];
+    entry2 -> vertex_transform [label="Vertex\nPipeline Setup"];
+    
+    render_layer -> output [label="Render\nFrame Complete"];
+    
+    // Input update loop
+    node [shape=ellipse, fillcolor="#ffcdd2", fontcolor="darkred"];
+    input_loop [label="Process Input\n(Keyboard/Mouse)"];
+    
+    input_loop -> vertex_transform [label="Update\nVertex Streams"];
+    network_layer -> lobby [label="Lobby Sync"];
+    lobby -> session [label="Session Join/Leave"];
+    
+    // State transitions
+    output -> entry1 [label="Present()\nSwap Buffers", style=dashed, color=gray];
+}

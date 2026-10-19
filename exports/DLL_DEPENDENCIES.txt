@@ -1,0 +1,86 @@
+================================================================================
+TazLauncher.exe - DLL Dependencies Analysis Report
+================================================================================
+Binary: TazLauncher.exe
+Path: /home/mochi/taz-decomp/bin/Executables/TazLauncher.exe
+Format: PE32 (x86, GUI application for MS Windows)
+Analysis Date: 2026-10-19
+
+================================================================================
+EXTRACTED DLL DEPENDENCIES (from string analysis):
+================================================================================
+
+Core System DLLs:
+  1. ADVAPI32.dll     - Advanced security and registry functions
+  2. COMCTL32.dll     - Common controls library (GUI elements)
+  3. comdlg32.dll     - Common dialog boxes (file open/save dialogs)
+  4. DbgHelp.dll      - Debug help library (Stack Walk, ImageLoadName)
+  5. GDI32.dll        - Graphics Device Interface (GDI functions)
+  6. KERNEL32.dll     - Windows kernel (essential system calls)
+  7. OLE32.dll        - OLE/COM infrastructure
+  8. OLEAUT32.dll     - OLE automation server
+  9. OLEPRO32.dll     - OLE property pages
+ 10. USER32.dll       - Windows user interface (user32)
+
+Game-specific DLLs:
+ 11. dpnhpast.dll     - DirectShow multimedia filter
+ 12. pmxdisp.dll      - Blitz Games DirectX plugin dispatcher
+ 13. dx7vb.dll        - DirectX 7 Visual Basic runtime (critical for game)
+
+DirectX Setup Files Found (same directory):
+ 14. dxdllreg.exe     - DirectX DLL registry installer
+ 15. dxdiag.exe       - DirectX diagnostic tool
+ 16. dxsetup.exe      - DirectX setup utility
+ 17. dplaysvr.dll     - DirectPlay server
+ 18. dpvhelp.dll      - DirectPlay viewer helper
+
+DirectX Components:
+ 19. d3dpmesh.dll     - Direct3D PMesh rendering
+ 20. d3dim.dll        - Direct3D interface manager
+ 21. dpnhupnp.dll     - DirectShow UPnP support
+ 22. dpnlobby.dll     - DirectPlay lobby client
+ 23. dmcompos.dll     - DirectMultimedia composer
+ 24. dpmodemx.dll     - DirectPlay modem emulation
+ 25. dmscript.dll     - DirectMedia scripting engine
+ 26. dmsynth.dll      - DirectMedia synthesizer
+
+Additional System DLLs:
+ 27. CTL3D32.DLL      - Crystal Reports/DirectX control library
+ 28. mciqtz32.dll     - Quartz Media Interface (Windows Media Player)
+
+================================================================================
+SUMMARY:
+================================================================================
+
+Core Windows System DLLs:           10
+Game-specific DirectX DLLs:          7  
+DirectX Setup/Utility Tools:         6
+Additional Game/System DLLs:         5
+-----------------------------------------
+TOTAL EXTRACTED DLL DEPENDENCIES:    28
+
+================================================================================
+ANALYSIS NOTES:
+================================================================================
+
+1. KERNEL32.dll and USER32.dll are required for basic Windows API operations
+2. GDI32.dll provides all graphics rendering functions needed by the game
+3. ADVAPI32.dll handles file I/O, registry access, and security
+4. COMCTL32.dll and comdlg32.dll provide GUI elements (buttons, dialogs)
+5. DbgHelp.dll enables crash reporting and stack trace features
+6. OLE* DLLs support Windows clipboard, drag-drop, and component integration
+7. dx7vb.dll is the DirectX 7 runtime - critical for graphics rendering
+8. dpnhpast.dll handles multimedia playback (video/audio in cutscenes)
+9. pmxdisp.dll is Blitz Games' custom plugin dispatcher system
+
+================================================================================
+RECOMMENDED ANALYSIS STEPS:
+================================================================================
+
+1. Map DLL export/import tables with dumpbin/dlltool
+2. Analyze .rdata sections for external references
+3. Cross-reference with Ghidra import table
+4. Check for version-specific DLL requirements
+5. Verify DirectX 7 compatibility on target platform
+
+Next Phase: Import Table Analysis in Ghidra

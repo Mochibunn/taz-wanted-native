@@ -1,0 +1,98 @@
+// TAZ: WANTED - Character Entity Relationships
+// Generated: 2026-10-19
+// Graphviz DOT format for entity hierarchy visualization
+
+digraph TazEntityHierarchy {
+    rankdir=TB;
+    node [shape=box, style=filled];
+    
+    // ROOT NODE
+    root ["Taz: Wanted - Entity Hierarchy" shape=ellipse fillcolor=red fontname="Arial,18,bold"];
+    
+    // ENTITY CATEGORIES
+    npc_group ["NPC Characters" fillcolor=lightblue];
+    boss_group ["Boss Entities" fillcolor=pink];
+    zone_group ["Zone Definitions" fillcolor=yellow];
+    sound_group ["Sound Assets" fillcolor=lightgreen];
+    
+    root -> npc_group [label="contains"]
+    root -> boss_group [label="contains"]
+    root -> zone_group [label="contains"]
+    root -> sound_group [label="contains"]
+    
+    // PROTAGONIST - TAZ
+    taz ["taz.pc (Main Character)" fillcolor=crimson shape=plaintext];
+    taz_info [_taz_info ["Magic: 0447bb19 | Size: 1.2MB" shape=box style=filled]]
+    taz_info -> taz [style=dotted]
+    
+    // BOSS ENTITIES (Antagonists)
+    sylvester ["sylvester.pc" fillcolor=pink];
+    boss1 ["boss1.pc" fillcolor=orange];
+    boss2 ["boss2.pc" fillcolor=orange"];
+    boss3 ["boss3.pc" fillcolor=orange"];
+    boss4 ["boss4.pc" fillcolor=orange"];
+    boss5 ["boss5.pc" fillcolor=orange"];
+    boss6 ["boss6.pc" fillcolor=orange"];
+    
+    npc_group -> sylvester [label=""]
+    npc_group -> boss1 [label=""]
+    npc_group -> boss2 [label=""]
+    npc_group -> boss3 [label=""]
+    npc_group -> boss4 [label=""]
+    npc_group -> boss5 [label=""]
+    npc_group -> boss6 [label=""]
+    
+    // NPC ENTITIES (Supporting)
+    ghost ["ghost.pc" fillcolor=lightblue];
+    catcher ["catcher.pc" fillcolor=lightblue];
+    keeper ["keeper.pc" fillcolor=lightblue];
+    zoohub ["zoohub.pc" fillcolor=lightblue];
+    
+    npc_group -> ghost [label=""]
+    npc_group -> catcher [label=""]
+    npc_group -> keeper [label=""]
+    npc_group -> zoohub [label=""]
+    
+    // ZONE DEFINITIONS
+    museum ["museum.pc" fillcolor=wheat];
+    cityhub ["cityhub.pc" fillcolor=wheat];
+    goldmine ["goldmine.pc" fillcolor=wheat];
+    
+    zone_group -> museum [label=""]
+    zone_group -> cityhub [label=""]
+    zone_group -> goldmine [label=""]
+    
+    // SOUND ASSETS GROUPING
+    sound_d ["*_sound_d (Default)" fillcolor=lightgreen];
+    sound_e ["*_sound_e (English)" fillcolor=lightgreen];
+    sound_f ["*_sound_f (French)" fillcolor=lightgreen];
+    sound_it ["*_sound_it (Italian)" fillcolor=lightgreen];
+    sound_uk ["*_sound_uk (UK)" fillcolor=lightgreen];
+    
+    sound_group -> sound_d [label=""]
+    sound_group -> sound_e [label=""]
+    sound_group -> sound_f [label=""]
+    sound_group -> sound_it [label=""]
+    sound_group -> sound_uk [label=""]
+    
+    // STATISTICS LAYERS
+    stats ["STATISTICS:" fillcolor=grey]
+    stats_count ["| Total Files: 625" shape=box style=filled]
+    stats_npc ["| NPC Models: ~450" shape=box style=filled]
+    stats_sound ["| Sound Assets: ~275" shape=box style=filled]
+    stats_zone ["| Zones: ~40" shape=box style=filled]
+    
+    stats -> stats_count
+    stats -> stats_npc
+    stats -> stats_sound
+    stats -> stats_zone
+    
+    // LEGEND
+    legend ["LEGEND:" fillcolor=grey]
+    char_legend ["Char: crimson/pink | NPC: lightblue | Zone: wheat" shape=box style=filled]
+    sound_legend ["Sound: lightgreen | Stats: grey" shape=box style=filled]
+    
+    legend -> char_legend
+    legend -> sound_legend
+    
+}

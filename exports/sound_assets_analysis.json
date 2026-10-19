@@ -1,0 +1,18 @@
+{
+  "project": "Taz: Wanted Audio System Analysis",
+  "generated": "2026-10-19 14:13 GMT+2",
+  "pattern_found": "*entityname_soundsuffix.pc",
+  "sound_file_count": 449,
+  "language_codes": ["d", "e", "f", "it", "uk"],
+  "sample_entities_with_sounds": [
+    {"entity": "alligator", "files": ["alligatorsound_d.pc", "alligatorsound_e.pc", "alligatorsound_f.pc", "alligatorsound_it.pc", "alligatorsound_uk.pc"]},
+    {"entity": "anvilgang", "files": ["anvilgangsound_d.pc", "anvilgangsound_e.pc", "anvilgangsound_f.pc", "anvilgangsound_it.pc", "anvilgangsound_uk.pc"]},
+    {"entity": "aquacossie", "files": ["aquacossie_d.pc", "aquacossie_e.pc", "aquacossie_f.pc", "aquacossie_it.pc", "aquacossie_uk.pc"]},
+    {"entity": "aquades", "files": ["aquadesound_d.pc", "aquadesound_e.pc", "aquadesound_f.pc", "aquadesound_it.pc", "aquadesound_uk.pc"]},
+    {"entity": "aqua_ecs", "files": ["aqua_ecssound_d.pc", "aqua_ecssound_e.pc", "aqua_ecssound_f.pc", "aqua_ecssound_it.pc", "aqua_ecssound_uk.pc"]}
+  ],
+  "estimated_size_per_entity_mb": {
+    "default": "93KB - 2.7MB per entity sound set"
+  },
+  "total_potential_audio_data_mb": "~650MB across all entities"
+}

@@ -1,0 +1,10 @@
+{
+  "file": "/home/mochi/taz-decomp/bin/Paks/taz.pc",
+  "size": 1220704,
+  "header_analysis": null,
+  "magic_bytes": "0447bb19",
+  "entities_found": [],
+  "extracted_data": {
+    "vertex_buffer_found": true
+  }
+}

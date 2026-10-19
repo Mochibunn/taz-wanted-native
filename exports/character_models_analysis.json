@@ -1,0 +1,98 @@
+{
+  "project": "Taz: Wanted Character Models",
+  "analysis_date": "2026-10-19",
+  "files_analyzed": 15,
+  "characters": [
+    {
+      "name": "floorpolisher.pc",
+      "size": 14480,
+      "magic": "af8c8e6210000000",
+      "has_vertex_data": true
+    },
+    {
+      "name": "crashhelmet.pc",
+      "size": 35936,
+      "magic": "e974256b10000000",
+      "has_vertex_data": true
+    },
+    {
+      "name": "irrepresible.pc",
+      "size": 49168,
+      "magic": "a909106b10000000",
+      "has_vertex_data": true
+    },
+    {
+      "name": "museumcossie_f.pc",
+      "size": 54832,
+      "magic": "75b1704f10000000",
+      "has_vertex_data": true
+    },
+    {
+      "name": "museumcossie_e.pc",
+      "size": 68496,
+      "magic": "18a4061f10000000",
+      "has_vertex_data": true
+    },
+    {
+      "name": "museumcossie_d.pc",
+      "size": 68496,
+      "magic": "1385de4610000000",
+      "has_vertex_data": true
+    },
+    {
+      "name": "museumcossie_uk.pc",
+      "size": 68496,
+      "magic": "3876cc7b10000000",
+      "has_vertex_data": true
+    },
+    {
+      "name": "museumcossie_it.pc",
+      "size": 71968,
+      "magic": "af0ad36d10000000",
+      "has_vertex_data": true
+    },
+    {
+      "name": "ghostcossie_f.pc",
+      "size": 82336,
+      "magic": "6bf7105c10000000",
+      "has_vertex_data": true
+    },
+    {
+      "name": "ghostcossie_e.pc",
+      "size": 82912,
+      "magic": "b938026210000000",
+      "has_vertex_data": true
+    },
+    {
+      "name": "tweety.pc",
+      "size": 87360,
+      "magic": "768eee2f10000000",
+      "has_vertex_data": true
+    },
+    {
+      "name": "ghostcossie_uk.pc",
+      "size": 87488,
+      "magic": "a668800810000000",
+      "has_vertex_data": true
+    },
+    {
+      "name": "ghostcossie_it.pc",
+      "size": 88288,
+      "magic": "b5545b7610000000",
+      "has_vertex_data": true
+    },
+    {
+      "name": "aquacossie_f.pc",
+      "size": 90368,
+      "magic": "1205af4310000000",
+      "has_vertex_data": true
+    },
+    {
+      "name": "aquacossie_e.pc",
+      "size": 94880,
+      "magic": "3cff765a10000000",
+      "has_vertex_data": true
+    }
+  ],
+  "summary": "Analyzed top 15 character models from 1,045,504 bytes total"
+}

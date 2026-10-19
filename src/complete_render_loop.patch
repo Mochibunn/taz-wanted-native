@@ -1,0 +1,130 @@
+*** Begin Patch
+*** File: src/main_simple_vulkan.cpp
+*** Operation: Replace incomplete event loop with complete render loop
+*** Context: Add vertex generation and swapchain-based rendering before main cleanup
+
+Old text:
+    std::cout << "\n========================================\n";
+    std::cout << "Taz: Wanted - Ready to render!\n";
+    std::cout << "========================================\n\n";
+
+    // Main event loop
+    SDL_Event event;
+    while (SDL_PollEvent(&event) != 0) {
+        if (event.type == SDL_QUIT || event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_ESCAPE) {
+            break;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(16));
+    }
+
+    cleanup();
+
+    return 0;
+}
+
+New text:
+    std::cout << "\n========================================\n";
+    std::cout << "Taz: Wanted - Ready to render!\n";
+    std::cout << "========================================\n\n";
+
+    // ============================================================================
+    // TAZ: WANTED - TERRAIN VERTEX GENERATION
+    // ============================================================================
+    generate_vertices(408);  // Generate terrain geometry
+
+    // ============================================================================
+    // TAZ: WANTED - RENDER LOOP WITH SWAPCHAIN ACQUIRE/PRESENT
+    // ============================================================================
+    uint32_t frame_count = 0;
+    bool running = true;
+
+    while (running) {
+        // Check for quit events
+        SDL_Event event;
+        if (SDL_PollEvent(&event) != 0) {
+            if (event.type == SDL_QUIT || 
+                event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_ESCAPE) {
+                running = false;
+                break;
+            }
+        }
+
+        if (!running) break;
+
+        // Acquire next swapchain image
+        VkResult acquire_result = vkAcquireNextImageKHR(
+            g_device,
+            g_swapchain,
+            UINT64_MAX,  // No timeout for real-time render loop
+            g_image_available_semaphores[0],  // Use first semaphore (circular buffer)
+            VK_NULL_HANDLE
+        );
+
+        if (acquire_result == VK_ERROR_OUT_OF_DATE_KHR) {
+            std::cout << "Surface changed, will recreate swapchain\n";
+            // In complete version: recreate_swapchain(); break;
+            continue;  // For demo, just skip frame
+        } else if (acquire_result != VK_SUCCESS) {
+            std::cerr << "Acquire result: " << acquire_result << "\n";
+            running = false;
+            break;
+        }
+
+        uint32_t image_index = static_cast<uint32_t>(acquire_result);
+        
+        // Reuse same semaphore for simplicity in this demo
+        VkCommandBufferAllocateInfo alloc_info{};
+        alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        alloc_info.commandPool = g_command_pool;
+        alloc_info.commandBufferCount = 1;
+
+        VkCommandBuffer command_buffer = VK_NULL_HANDLE;
+        vkAllocateCommandBuffers(g_device, &alloc_info, &command_buffer);
+
+        // Start rendering on acquired image
+        render_frame(command_buffer, image_index);
+
+        // Submit and present
+        VkSubmitInfo submit_info{};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &command_buffer;
+
+        vkQueueSubmit(graphics_queue, 1, &submit_info, g_image_available_semaphores[0]);
+        
+        // Present the rendered image to screen
+        VkPresentInfoKHR present_info{};
+        present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+        present_info.waitSemaphoreCount = 0;
+        present_info.swapchainCount = 1;
+        present_info.pSwapchains = &g_swapchain;
+        present_info.pImageIndices = &image_index;
+
+        VkResult present_result = vkQueuePresentKHR(present_queue, &present_info);
+
+        // Wait for presentation (or timeout) before next frame
+        if (present_result != VK_SUCCESS && present_result != VK_SUBOPTIMAL_KHR) {
+            // Presentation error - wait a bit before retrying
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+
+        vkQueueWaitIdle(graphics_queue);
+        vkFreeCommandBuffers(g_device, g_command_pool, 1, &command_buffer);
+        
+        frame_count++;
+        if (frame_count % 30 == 0) {
+            std::cout << "Frame " << frame_count << " rendered and presented\n";
+        }
+    }
+
+    std::cout << "\n========================================\n";
+    std::cout << "Taz: Wanted - Rendering finished. " << frame_count << " frames rendered.\n";
+    std::cout << "========================================\n";
+
+    cleanup();
+
+    return 0;
+}
+
+*** End Patch

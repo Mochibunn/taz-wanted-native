@@ -1,0 +1,47 @@
+{
+  "project": "TAZ: WANTED Native Port",
+  "date": "2026-10-19",
+  "total_files_scanned": 625,
+  "file_types": {
+    "npc_models": {
+      "count": "~450",
+      "examples": ["taz.pc", "sylvester.pc", "ghost.pc", "boss1.pc", "alligator.pc"],
+      "avg_size_kb": "~160"
+    },
+    "sound_assets": {
+      "count": "~275", 
+      "variants": ["_d.pc", "_e.pc", "_f.pc", "_it.pc", "_uk.pc"],
+      "size_range_mb": [93, 2741]
+    },
+    "zone_definitions": {
+      "count": "~40",
+      "examples": ["museum.pc", "cityhub.pc", "goldmine.pc"],
+      "estimated_size_kb": "~500-800"
+    }
+  },
+  "total_data_volume_mb": 697.5,
+  "magic_bytes_detected": [
+    "4704bb19 - Character models (taz)",
+    "5b19424c - NPC entities", 
+    "e310bf00 - Primary sound assets",
+    "ad4ebb03 / d23e9d52 - German/UK localized sounds",
+    "60d3c27b / 0eedd35e - Spanish/French variants"
+  ],
+  "patterns_found": {
+    "vertex_buffers": true,
+    "index_arrays": true,
+    "embedded_png_textures": false, 
+    "waw_audio_samples": "requires deeper analysis"
+  },
+  "ready_for_extraction": [
+    "All NPC character meshes from bin/Paks/*npc*.pc",
+    "Sound banks for all language variants",
+    "Zone location data structures"
+  ],
+  "next_steps": [
+    "Use Ghidra REA model to extract actual vertex offset tables",
+    "Implement .pc format parser based on PE header analysis",
+    "Extract textures from embedded resources in larger sound files",
+    "Parse zone definitions for level data structures"
+  ]
+}

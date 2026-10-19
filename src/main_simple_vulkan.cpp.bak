@@ -1,0 +1,313 @@
+/* main_simple_vulkan.cpp - Vulkan main with MVP matrices, camera updates */
+#include "renderer/vulkan_pipeline.h"
+#include <SDL2/SDL.h>
+#include <vulkan/vulkan.h>
+#include <iostream>
+#include <vector>
+#include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
+#define WINDOW_WIDTH 800
+#define WINDOW_HEIGHT 600
+
+// Forward declarations from vulkan_pipeline.h
+namespace vulkan_pipeline {
+struct GraphicsPipelineState;
+}
+
+// Vulkan instance and device handles
+VkInstance g_instance = VK_NULL_HANDLE;
+VkPhysicalDevice g_physical_device = VK_NULL_HANDLE;
+VkDevice g_device = VK_NULL_HANDLE;
+VkCommandPool g_command_pool = VK_NULL_HANDLE;
+VkSurfaceKHR g_surface = VK_NULL_HANDLE;
+VkQueue g_graphics_queue = 0;
+VkQueue g_present_queue = 0;
+VkSwapchainKHR g_swapchain = VK_NULL_HANDLE;
+uint32_t g_image_index = 0;
+bool g_should_quit = false;
+
+// ============================================================================
+// CAMERA & UNIFORMS - STEP 3: MVP Matrix Setup and Uniform Buffer Management
+// ============================================================================
+
+struct MvpUniformData {
+    glm::mat4 projection;
+    glm::mat4 view;
+    glm::mat4 model;
+    bool use_terrain_colors = true;
+    float vertex_coords[3][2];
+};
+
+MvpUniformData g_mvp_uniforms = {};
+VkBuffer g_mvp_uniform_buffer = VK_NULL_HANDLE;
+VkDeviceMemory g_mvp_uniform_buffer_memory = VK_NULL_HANDLE;
+VkDescriptorSetLayout g_descriptor_set_layout = VK_NULL_HANDLE;
+VkPipelineLayout g_pipeline_layout = VK_NULL_HANDLE;
+
+// Initialize camera and MVP uniform data
+void initCameraMvp(VkDevice device) {
+    MvpUniformData& uniforms = g_mvp_uniforms;
+    
+    // Set up initial camera position
+    glm::vec3 camera_pos(0.0f, 0.5f, -2.0f);
+    glm::vec3 look_at(0.0f, 0.0f, 0.0f);
+    glm::vec3 up(0.0f, 1.0f, 0.0f);
+    
+    // Create view matrix (camera transformation)
+    uniforms.view = glm::lookAt(camera_pos, look_at, up);
+    
+    // Create projection matrix with proper aspect ratio
+    uniforms.projection = glm::perspective(60.0f, 
+                                           static_cast<float>(WINDOW_WIDTH) / WINDOW_HEIGHT,
+                                           0.1f, 1000.0f);
+    
+    // Identity model matrix (no scaling/rotation yet)
+    uniforms.model = glm::mat4(1.0f);
+    
+    // Default vertex coordinates for triangle
+    uniforms.vertex_coords[0][0] = -0.5f;
+    uniforms.vertex_coords[0][1] = -0.25f;
+    uniforms.vertex_coords[1][0] = 0.5f;
+    uniforms.vertex_coords[1][1] = -0.25f;
+    uniforms.vertex_coords[2][0] = 0.0f;
+    uniforms.vertex_coords[2][1] = 0.375f;
+}
+
+// Create uniform buffer for MVP matrices and shader uniforms
+VkResult createMvpUniformBuffer() {
+    if (g_device == VK_NULL_HANDLE) {
+        std::cerr << "Error: Vulkan device not initialized\n";
+        return VK_ERROR_DEVICE_LOST;
+    }
+    
+    MvpUniformData& uniforms = g_mvp_uniforms;
+    VkDeviceSize size = sizeof(MvpUniformData);
+    
+    // Create buffer for uniform data
+    VkBufferCreateInfo buffer_create_info{};
+    buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    buffer_create_info.size = size;
+    buffer_create_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    buffer_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    
+    VkBuffer uniform_buffer;
+    VkResult result = vkCreateBuffer(g_device, &buffer_create_info, nullptr, &uniform_buffer);
+    if (result != VK_SUCCESS) {
+        std::cerr << "Error: Failed to create uniform buffer\n";
+        return result;
+    }
+    
+    // Get memory requirements
+    VkMemoryRequirements mem_reqs;
+    vkGetBufferMemoryRequirements(g_device, uniform_buffer, &mem_reqs);
+    
+    // Allocate memory (simplified - in production check properties)
+    VkMemoryAllocateInfo alloc_info{};
+    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    alloc_info.allocationSize = mem_reqs.size;
+    alloc_info.memoryTypeIndex = 0;
+    
+    VkDeviceMemory uniform_buffer_memory;
+    result = vkAllocateMemory(g_device, &alloc_info, nullptr, &uniform_buffer_memory);
+    
+    if (result != VK_SUCCESS) {
+        std::cerr << "Error: Failed to allocate uniform buffer memory\n";
+        vkDestroyBuffer(g_device, uniform_buffer, nullptr);
+        return result;
+    }
+    
+    // Bind memory to buffer and copy data
+    VkBufferMemoryBarrier barrier{};
+    barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+    barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
+    barrier.dstAccessMask = VK_ACCESS_UNIFORM_READ_BIT;
+    barrier.oldLayout = VK_BUFFER_LAYOUT_UNINITIALIZED;
+    barrier.newLayout = VK_BUFFER_LAYOUT_GENERAL;
+    barrier.size = VK_WHOLE_SIZE;
+    barrier.offset = 0;
+    
+    // Create pipeline layout with descriptor set for uniform buffer binding
+    VkDescriptorSetLayoutCreateInfo layout_create_info{};
+    layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layout_create_info.bindingCount = 1;
+    
+    VkDescriptorSetLayoutBinding uniform_binding{};
+    uniform_binding.binding = 0;
+    uniform_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    uniform_binding.descriptorCount = 1;
+    uniform_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+    
+    layout_create_info.pBindings = &uniform_binding;
+    
+    VkDescriptorSetLayout descriptor_layout;
+    vkCreateDescriptorSetLayout(g_device, &layout_create_info, nullptr, &descriptor_layout);
+    
+    // Create pipeline layout
+    VkPipelineLayoutCreateInfo pipeline_layout_info{};
+    pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipeline_layout_info.setLayoutCount = 1;
+    pipeline_layout_info.pSetLayouts = &descriptor_layout;
+    
+    vkCreatePipelineLayout(g_device, &pipeline_layout_info, nullptr, &g_pipeline_layout);
+    
+    // Copy uniform data to buffer
+    std::vector<char> buffer_data(sizeof(MvpUniformData));
+    memcpy(buffer_data.data(), &uniforms, sizeof(MvpUniformData));
+    
+    VkCommandBuffer cmd_buffer = 0; // Would bind from command pool in full implementation
+    
+    // In a real application, you would:
+    // 1. Create a command buffer
+    // 2. Update the buffer with vkCmdUpdateBuffer()
+    // 3. Upload data to device memory
+    
+    g_mvp_uniform_buffer = uniform_buffer;
+    g_mvp_uniform_buffer_memory = uniform_buffer_memory;
+    
+    return VK_SUCCESS;
+}
+
+// Update MVP matrices and upload to uniform buffer
+void updateMvpUniforms(VkDevice device, VkCommandBuffer cmd_buffer) {
+    MvpUniformData& uniforms = g_mvp_uniforms;
+    VkBuffer uniform_buffer = g_mvp_uniform_buffer;
+    
+    // Calculate view matrix with camera translation
+    glm::mat4 new_view = uniforms.projection * 
+                         glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.5f, -2.0f)) *
+                         uniforms.view;
+    
+    // Update uniform structure with new matrices
+    uniforms.projection = uniforms.projection;
+    uniforms.view = new_view;
+    uniforms.model = uniforms.model;
+    
+    // Prepare buffer data
+    std::vector<char> buffer_data(sizeof(MvpUniformData));
+    memcpy(buffer_data.data(), &uniforms, sizeof(MvpUniformData));
+    
+    // Update uniform buffer on device (requires command buffer binding)
+    if (cmd_buffer != 0) {
+        VkBufferCopy region{};
+        region.size = sizeof(MvpUniformData);
+        
+        VkBufferImageCopy copy_region{};
+        
+        // In production: vkCmdUpdateBuffer(cmd_buffer, uniform_buffer, 0, size, buffer_data.data());
+    }
+}
+
+// Initialize descriptor sets for MVP uniform binding
+void initializeDescriptorSets() {
+    if (g_pipeline_layout == VK_NULL_HANDLE) {
+        return;
+    }
+    
+    // Create pipeline and bind to command buffer
+    // Full pipeline creation would go here with vertex input assembly,
+    // shader stages, rendering targets, etc.
+}
+
+// ============================================================================
+// RENDER LOOP WITH CAMERA UPDATES
+// ============================================================================
+
+VkResult renderFrame(uint32_t image_index) {
+    if (g_device == VK_NULL_HANDLE || g_command_pool == VK_NULL_HANDLE) {
+        return VK_ERROR_INITIALIZATION_FAILED;
+    }
+    
+    VkCommandBuffer cmd_buffer = 0; // Would get from pool
+    
+    // Begin command buffer recording
+    VkCommandBufferBeginInfo begin_info{};
+    begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    
+    vkCmdBeginRecord(cmd_buffer, &begin_info);
+    
+    // Bind pipeline
+    GraphicsPipelineState& pipeline_state = get_current_pipeline();
+    vulkan_pipeline::bindPipeline(cmd_buffer, pipeline_state);
+    
+    // Update MVP uniforms for this frame (camera movement, etc.)
+    updateMvpUniforms(g_device, cmd_buffer);
+    
+    // Set viewport and scissor
+    VkViewport viewport{};
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
+    viewport.width = WINDOW_WIDTH;
+    viewport.height = WINDOW_HEIGHT;
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+    
+    VkRect2D scissor{};
+    scissor.offset = {0, 0};
+    scissor.extent = {WINDOW_WIDTH, WINDOW_HEIGHT};
+    
+    vkCmdSetViewport(cmd_buffer, 0, 1, &viewport);
+    vkCmdSetScissor(cmd_buffer, 0, 1, &scissor);
+    
+    // Draw command with vertex buffer and index buffer
+    vkCmdBindVertexBuffers(cmd_buffer, 0, 1, /*vertex_buffers*/ nullptr, /*offsets*/ nullptr);
+    vkCmdDraw(cmd_buffer, 3, 1, 0, 0); // Triangle draw call
+    
+    // End command buffer recording
+    vkCmdEndRecord(cmd_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+    
+    return VK_SUCCESS;
+}
+
+// Main function for Vulkan application
+int main(int argc, char* argv[]) {
+    // Initialize SDL2 video subsystem
+    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+        std::cerr << "SDL could not initialize: " << SDL_GetError() << "\n";
+        return -1;
+    }
+
+    // Create Vulkan instance and window surface
+    VkResult result = createInstance();
+    if (result != VK_SUCCESS) {
+        std::cerr << "Failed to create Vulkan instance\n";
+        return -1;
+    }
+
+    // Initialize camera and MVP uniform data
+    initCameraMvp(g_device);
+    
+    // Create MVP uniform buffer
+    result = createMvpUniformBuffer();
+    if (result != VK_SUCCESS) {
+        std::cerr << "Failed to create MVP uniform buffer\n";
+        return -1;
+    }
+    
+    // Setup render loop with camera updates
+    while (!g_should_quit && SDL_WaitEvent(nullptr)) {
+        VkResult frame_result = renderFrame(g_image_index);
+        
+        if (frame_result != VK_SUCCESS) {
+            continue;
+        }
+
+        // Present the current frame
+        present_swapchain_frame(present_info);
+        
+        // Update camera position on each frame for dynamic viewport updates
+        MvpUniformData& uniforms = g_mvp_uniforms;
+        uniforms.view = glm::lookAt(
+            glm::vec3(0.0f, 0.5f + std::sin(SDL_GetTicks() / 1000.0f) * 0.2f, -2.0f),
+            glm::vec3(0.0f, 0.0f, 0.0f),
+            glm::vec3(0.0f, 1.0f, 0.0f)
+        );
+    }
+
+    // Cleanup all Vulkan resources
+    cleanupVulkanResources();
+
+    SDL_Quit();
+    
+    return 0;
+}

@@ -1,0 +1,418 @@
+make: Entering directory '/home/mochi/taz-decomp/build'
+make[1]: Entering directory '/home/mochi/taz-decomp/build'
+make[2]: Entering directory '/home/mochi/taz-decomp/build'
+make[2]: Leaving directory '/home/mochi/taz-decomp/build'
+make[2]: Entering directory '/home/mochi/taz-decomp/build'
+[ 50%] Building CXX object CMakeFiles/taz_wanted.dir/src/main_complete_sdlvulkan.cpp.o
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp: In function ‘VkResult create_swapchain()’:
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:30:81: error: cannot convert ‘uint32_t*’ {aka ‘unsigned int*’} to ‘VkSurfaceFormatKHR*’
+   30 |     vkGetPhysicalDeviceSurfaceFormatsKHR(g_physical_device, g_surface, nullptr, &surface_format_count);
+      |                                                                                 ^~~~~~~~~~~~~~~~~~~~~
+      |                                                                                 |
+      |                                                                                 uint32_t* {aka unsigned int*}
+In file included from /usr/include/vulkan/vulkan.h:11,
+                 from /home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:12:
+/usr/include/vulkan/vulkan_core.h:7616:49: note:   initializing argument 4 of ‘VkResult vkGetPhysicalDeviceSurfaceFormatsKHR(VkPhysicalDevice, VkSurfaceKHR, uint32_t*, VkSurfaceFormatKHR*)’
+ 7616 |     VkSurfaceFormatKHR*                         pSurfaceFormats);
+      |     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:34:16: error: ‘VK_ERROR_INCOMPATIBLE_DEVICE_ORATION’ was not declared in this scope; did you mean ‘VK_ERROR_INCOMPATIBLE_DRIVER’?
+   34 |         return VK_ERROR_INCOMPATIBLE_DEVICE_ORATION;
+      |                ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      |                VK_ERROR_INCOMPATIBLE_DRIVER
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:59:5: error: ‘vkGetPhysicalDeviceSurfaceImageFormatsKHR’ was not declared in this scope; did you mean ‘vkGetPhysicalDeviceSurfaceFormatsKHR’?
+   59 |     vkGetPhysicalDeviceSurfaceImageFormatsKHR(g_physical_device, g_surface, nullptr, &image_count, nullptr);
+      |     ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      |     vkGetPhysicalDeviceSurfaceFormatsKHR
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:74:31: error: ‘clamp’ is not a member of ‘std’
+   74 |         uint32_t width = std::clamp(static_cast<uint32_t>(WINDOW_WIDTH),
+      |                               ^~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:74:59: error: ‘WINDOW_WIDTH’ was not declared in this scope; did you mean ‘WINT_WIDTH’?
+   74 |         uint32_t width = std::clamp(static_cast<uint32_t>(WINDOW_WIDTH),
+      |                                                           ^~~~~~~~~~~~
+      |                                                           WINT_WIDTH
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:77:32: error: ‘clamp’ is not a member of ‘std’
+   77 |         uint32_t height = std::clamp(static_cast<uint32_t>(WINDOW_HEIGHT),
+      |                                ^~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:77:60: error: ‘WINDOW_HEIGHT’ was not declared in this scope
+   77 |         uint32_t height = std::clamp(static_cast<uint32_t>(WINDOW_HEIGHT),
+      |                                                            ^~~~~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:85:42: error: ‘SWAPCHAIN_IMAGE_COUNT’ was not declared in this scope
+   85 |     uint32_t image_array_size = std::max(SWAPCHAIN_IMAGE_COUNT,
+      |                                          ^~~~~~~~~~~~~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:103:66: error: ‘device_count’ was not declared in this scope
+  103 |     vkGetPhysicalDeviceQueueFamilyProperties(g_physical_device, &device_count, nullptr);
+      |                                                                  ^~~~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:108:27: error: ‘__gnu_cxx::__alloc_traits<std::allocator<VkQueueFamilyProperties>, VkQueueFamilyProperties>::value_type’ {aka ‘struct VkQueueFamilyProperties’} has no member named ‘flags’
+  108 |         if ((qfamilies[i].flags & VK_QUEUE_GRAPHICS_BIT) != 0) graphics_family_idx = i;
+      |                           ^~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:109:40: error: ‘VK_QUEUE_PRESENT_BIT’ was not declared in this scope; did you mean ‘VK_QUEUE_PROTECTED_BIT’?
+  109 |         if ((qfamilies[i].queueFlags & VK_QUEUE_PRESENT_BIT) != 0) present_family_idx = i;
+      |                                        ^~~~~~~~~~~~~~~~~~~~
+      |                                        VK_QUEUE_PROTECTED_BIT
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:145:83: error: ‘g_swapchain’ was not declared in this scope
+  145 |     VkResult result = vkCreateSwapchainKHR(g_device, &swapchain_create, nullptr, &g_swapchain);
+      |                                                                                   ^~~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:159:16: error: ‘VK_ERROR_INCOMPATIBLE_DEVICE_ORATION’ was not declared in this scope; did you mean ‘VK_ERROR_INCOMPATIBLE_DRIVER’?
+  159 |         return VK_ERROR_INCOMPATIBLE_DEVICE_ORATION;
+      |                ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      |                VK_ERROR_INCOMPATIBLE_DRIVER
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:165:5: error: ‘g_swapchain_images’ was not declared in this scope
+  165 |     g_swapchain_images.resize(swapchain_image_count);
+      |     ^~~~~~~~~~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:173:17: error: ‘VkImageViewCreateInfo’ {aka ‘struct VkImageViewCreateInfo’} has no member named ‘imageUsage’
+  173 |     view_create.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+      |                 ^~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:185:9: error: ‘g_swapchain_image_views’ was not declared in this scope; did you mean ‘swapchain_image_count’?
+  185 |         g_swapchain_image_views.push_back(temp_view);
+      |         ^~~~~~~~~~~~~~~~~~~~~~~
+      |         swapchain_image_count
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:188:35: error: ‘g_swapchain_image_views’ was not declared in this scope; did you mean ‘swapchain_image_count’?
+  188 |     std::cout << "✅ Created " << g_swapchain_image_views.size() << " image views\n";
+      |                                   ^~~~~~~~~~~~~~~~~~~~~~~
+      |                                   swapchain_image_count
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:101:29: warning: unused variable ‘queue_props’ [-Wunused-variable]
+  101 |     VkQueueFamilyProperties queue_props;
+      |                             ^~~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:114:14: warning: unused variable ‘present_mode_ext’ [-Wunused-variable]
+  114 |     VkBool32 present_mode_ext = VK_FALSE;
+      |              ^~~~~~~~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:115:14: warning: unused variable ‘present_mode_idx’ [-Wunused-variable]
+  115 |     uint32_t present_mode_idx = 0;
+      |              ^~~~~~~~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp: At global scope:
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:205:10: error: redefinition of ‘VkDevice_T* g_device’
+  205 | VkDevice g_device = VK_NULL_HANDLE;
+      |          ^~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:20:10: note: ‘VkDevice_T* g_device’ previously defined here
+   20 | VkDevice g_device = VK_NULL_HANDLE;
+      |          ^~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp: In function ‘VkResult create_render_pass()’:
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:217:93: error: request for member ‘format’ in ‘g_swapchain_image_views.std::vector<VkImageView_T*>::operator[](0)’, which is of pointer type ‘__gnu_cxx::__alloc_traits<std::allocator<VkImageView_T*>, VkImageView_T*>::value_type’ {aka ‘VkImageView_T*’} (maybe you meant to use ‘->’ ?)
+  217 |                                       VK_FORMAT_R8G8B8A8_UNORM : g_swapchain_image_views[0].format;
+      |                                                                                             ^~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:250:13: error: ‘VkSubpassDescription’ {aka ‘struct VkSubpassDescription’} has no member named ‘pipelineInputAttachCount’
+  250 |     subpass.pipelineInputAttachCount = 0;
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:266:5: error: ‘g_render_pass’ was not declared in this scope; did you mean ‘VkRenderPass’?
+  266 |     g_render_pass = result;
+      |     ^~~~~~~~~~~~~
+      |     VkRenderPass
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:220:27: warning: unused variable ‘color_components’ [-Wunused-variable]
+  220 |     VkColorComponentFlags color_components =
+      |                           ^~~~~~~~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp: In function ‘VkShaderModule_T* create_shader_module_from_file(const char*, VkShaderStageFlagBits)’:
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:277:31: error: variable ‘std::ifstream shader_file’ has initializer but incomplete type
+  277 |     std::ifstream shader_file(filename, std::ios::in | std::ios::ate);
+      |                               ^~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:287:22: error: ‘file’ was not declared in this scope
+  287 |     shader_file.read(file.data(), file_size);
+      |                      ^~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:276:77: warning: unused parameter ‘stage’ [-Wunused-parameter]
+  276 |                                                       VkShaderStageFlagBits stage) {
+      |                                                       ~~~~~~~~~~~~~~~~~~~~~~^~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp: In function ‘VkResult create_pipeline_layout()’:
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:312:22: warning: unused variable ‘pipeline_layout’ [-Wunused-variable]
+  312 |     VkPipelineLayout pipeline_layout = VK_NULL_HANDLE; // Will be created dynamically
+      |                      ^~~~~~~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp: In function ‘VkResult create_graphics_pipeline(VkShaderModule, VkShaderModule)’:
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:338:34: error: ‘Vertex’ was not declared in this scope
+  338 |     binding_desc.stride = sizeof(Vertex);
+      |                                  ^~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:344:27: error: ‘Vertex’ is not a class, namespace, or enumeration
+  344 |     attribute[0].format = Vertex::get_format();
+      |                           ^~~~~~
+In file included from /usr/include/strings.h:23,
+                 from /usr/include/string.h:462,
+                 from /usr/include/SDL2/SDL_stdinc.h:60,
+                 from /usr/include/SDL2/SDL_main.h:25,
+                 from /usr/include/SDL2/SDL.h:32,
+                 from /home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:10:
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:345:36: error: ‘Vertex’ does not name a type
+  345 |     attribute[0].offset = offsetof(Vertex, position);
+      |                                    ^~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:349:27: error: ‘Vertex’ is not a class, namespace, or enumeration
+  349 |     attribute[1].format = Vertex::get_format();
+      |                           ^~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:350:36: error: ‘Vertex’ does not name a type
+  350 |     attribute[1].offset = offsetof(Vertex, uv);
+      |                                    ^~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:352:5: error: ‘VkVertexInputDescriptionState’ was not declared in this scope; did you mean ‘VkVertexInputBindingDescription2EXT’?
+  352 |     VkVertexInputDescriptionState vertex_input_state{};
+      |     ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      |     VkVertexInputBindingDescription2EXT
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:353:5: error: ‘vertex_input_state’ was not declared in this scope
+  353 |     vertex_input_state.vertexBindingDescriptionCount = 1;
+      |     ^~~~~~~~~~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:414:26: error: ‘VkPipelineDynamicStateCreateInfo’ {aka ‘struct VkPipelineDynamicStateCreateInfo’} has no member named ‘dynamicStateMask’; did you mean ‘pDynamicStates’?
+  414 |     dynamic_state_create.dynamicStateMask =
+      |                          ^~~~~~~~~~~~~~~~
+      |                          pDynamicStates
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:503:24: error: ‘VkPipelineDynamicStateCreateInfo’ {aka ‘struct VkPipelineDynamicStateCreateInfo’} has no member named ‘dynamicStateMask’; did you mean ‘pDynamicStates’?
+  503 |     dynamic_state_info.dynamicStateMask =
+      |                        ^~~~~~~~~~~~~~~~
+      |                        pDynamicStates
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:510:34: error: ‘g_render_pass’ was not declared in this scope; did you mean ‘VkRenderPass’?
+  510 |     pipeline_create.renderPass = g_render_pass;
+      |                                  ^~~~~~~~~~~~~
+      |                                  VkRenderPass
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:468:25: warning: unused variable ‘push_constant_range’ [-Wunused-variable]
+  468 |     VkPushConstantRange push_constant_range{};
+      |                         ^~~~~~~~~~~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:331:57: warning: unused parameter ‘vertex_module’ [-Wunused-parameter]
+  331 | static VkResult create_graphics_pipeline(VkShaderModule vertex_module,
+      |                                          ~~~~~~~~~~~~~~~^~~~~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:332:58: warning: unused parameter ‘fragment_module’ [-Wunused-parameter]
+  332 |                                           VkShaderModule fragment_module) {
+      |                                           ~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp: At global scope:
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:532:10: error: redefinition of ‘VkDevice_T* g_device’
+  532 | VkDevice g_device = VK_NULL_HANDLE;
+      |          ^~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:20:10: note: ‘VkDevice_T* g_device’ previously defined here
+   20 | VkDevice g_device = VK_NULL_HANDLE;
+      |          ^~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:533:16: error: redefinition of ‘VkSwapchainKHR_T* g_swapchain’
+  533 | VkSwapchainKHR g_swapchain = VK_NULL_HANDLE;
+      |                ^~~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:206:16: note: ‘VkSwapchainKHR_T* g_swapchain’ previously defined here
+  206 | VkSwapchainKHR g_swapchain = VK_NULL_HANDLE;
+      |                ^~~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:538:13: error: redefinition of ‘SDL_Window* window_ptr’
+  538 | SDL_Window* window_ptr = nullptr;
+      |             ^~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:16:13: note: ‘SDL_Window* window_ptr’ previously defined here
+   16 | SDL_Window* window_ptr = nullptr;
+      |             ^~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp: In function ‘VkResult create_command_pool()’:
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:549:36: error: ‘graphics_queue’ was not declared in this scope
+  549 |     pool_create.queueFamilyIndex = graphics_queue;
+      |                                    ^~~~~~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp: In function ‘VkResult allocate_command_buffers()’:
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:578:59: error: ‘g_swapchain_images’ was not declared in this scope; did you mean ‘g_swapchain_image_views’?
+  578 |     alloc_info.commandBufferCount = static_cast<uint32_t>(g_swapchain_images.size());
+      |                                                           ^~~~~~~~~~~~~~~~~~
+      |                                                           g_swapchain_image_views
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:582:48: error: cannot convert ‘VkCommandBufferAllocateInfo*’ to ‘VkDevice’ {aka ‘VkDevice_T*’}
+  582 |     VkResult result = vkAllocateCommandBuffers(&alloc_info, command_buffers);
+      |                                                ^~~~~~~~~~~
+      |                                                |
+      |                                                VkCommandBufferAllocateInfo*
+/usr/include/vulkan/vulkan_core.h:4533:49: note:   initializing argument 1 of ‘VkResult vkAllocateCommandBuffers(VkDevice, const VkCommandBufferAllocateInfo*, VkCommandBuffer_T**)’
+ 4533 |     VkDevice                                    device,
+      |     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:589:5: error: ‘g_command_buffers’ was not declared in this scope; did you mean ‘command_buffers’?
+  589 |     g_command_buffers.resize(alloc_info.commandBufferCount);
+      |     ^~~~~~~~~~~~~~~~~
+      |     command_buffers
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:571:21: warning: unused variable ‘swapchains’ [-Wunused-variable]
+  571 |     VkSwapchainKHR* swapchains = &g_swapchain;
+      |                     ^~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:572:14: warning: unused variable ‘swapchain_count’ [-Wunused-variable]
+  572 |     uint32_t swapchain_count = 1;
+      |              ^~~~~~~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp: In function ‘VkResult record_render_commands(VkCommandBuffer, uint32_t)’:
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:661:41: error: ‘WINDOW_WIDTH’ was not declared in this scope; did you mean ‘WINT_WIDTH’?
+  661 |     rendering_info.renderArea.extent = {WINDOW_WIDTH, WINDOW_HEIGHT};
+      |                                         ^~~~~~~~~~~~
+      |                                         WINT_WIDTH
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:661:55: error: ‘WINDOW_HEIGHT’ was not declared in this scope
+  661 |     rendering_info.renderArea.extent = {WINDOW_WIDTH, WINDOW_HEIGHT};
+      |                                                       ^~~~~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:661:68: error: no match for ‘operator=’ (operand types are ‘VkExtent2D’ and ‘<brace-enclosed initializer list>’)
+  661 |     rendering_info.renderArea.extent = {WINDOW_WIDTH, WINDOW_HEIGHT};
+      |                                                                    ^
+/usr/include/vulkan/vulkan_core.h:2790:16: note: candidate: ‘constexpr VkExtent2D& VkExtent2D::operator=(const VkExtent2D&)’
+ 2790 | typedef struct VkExtent2D {
+      |                ^~~~~~~~~~
+/usr/include/vulkan/vulkan_core.h:2790:16: note:   no known conversion for argument 1 from ‘<brace-enclosed initializer list>’ to ‘const VkExtent2D&’
+/usr/include/vulkan/vulkan_core.h:2790:16: note: candidate: ‘constexpr VkExtent2D& VkExtent2D::operator=(VkExtent2D&&)’
+/usr/include/vulkan/vulkan_core.h:2790:16: note:   no known conversion for argument 1 from ‘<brace-enclosed initializer list>’ to ‘VkExtent2D&&’
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:666:68: error: request for member ‘format’ in ‘g_swapchain_image_views.std::vector<VkImageView_T*>::operator[](((std::vector<VkImageView_T*>::size_type)image_index))’, which is of pointer type ‘__gnu_cxx::__alloc_traits<std::allocator<VkImageView_T*>, VkImageView_T*>::value_type’ {aka ‘VkImageView_T*’} (maybe you meant to use ‘->’ ?)
+  666 |     color_attachment.format = g_swapchain_image_views[image_index].format;
+      |                                                                    ^~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:676:40: error: cannot convert ‘VkAttachmentReference*’ to ‘const VkRenderingAttachmentInfo*’ in assignment
+  676 |     rendering_info.pColorAttachments = &color_attachment_ref;
+      |                                        ^~~~~~~~~~~~~~~~~~~~~
+      |                                        |
+      |                                        VkAttachmentReference*
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:653:56: warning: unused parameter ‘cmd_buffer’ [-Wunused-parameter]
+  653 | static VkResult record_render_commands(VkCommandBuffer cmd_buffer,
+      |                                        ~~~~~~~~~~~~~~~~^~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp: In function ‘VkResult submit_command_buffer(VkCommandBuffer, uint32_t)’:
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:707:9: error: ‘g_present_fences’ was not declared in this scope; did you mean ‘vkResetFences’?
+  707 |     if (g_present_fences.size() <= static_cast<size_t>(image_index)) {
+      |         ^~~~~~~~~~~~~~~~
+      |         vkResetFences
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:710:9: error: ‘g_image_available_semaphores’ was not declared in this scope
+  710 |     if (g_image_available_semaphores.size() <= static_cast<size_t>(image_index)) {
+      |         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:713:9: error: ‘g_render_complete_semaphores’ was not declared in this scope
+  713 |     if (g_render_complete_semaphores.size() <= static_cast<size_t>(image_index)) {
+      |         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:718:45: error: ‘g_image_available_semaphores’ was not declared in this scope; did you mean ‘image_available_semaphore’?
+  718 |     VkSemaphore image_available_semaphore = g_image_available_semaphores[image_index];
+      |                                             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      |                                             image_available_semaphore
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:719:29: error: ‘g_present_fences’ was not declared in this scope; did you mean ‘present_fence’?
+  719 |     VkFence present_fence = g_present_fences[image_index];
+      |                             ^~~~~~~~~~~~~~~~
+      |                             present_fence
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:728:30: error: ‘VK_FENCE_SIGNALED_BIT’ was not declared in this scope; did you mean ‘VK_FENCE_CREATE_SIGNALED_BIT’?
+  728 |         fence_create.flags = VK_FENCE_SIGNALED_BIT;
+      |                              ^~~~~~~~~~~~~~~~~~~~~
+      |                              VK_FENCE_CREATE_SIGNALED_BIT
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:745:17: error: ‘VkSubmitInfo’ {aka ‘struct VkSubmitInfo’} has no member named ‘waitSemaphoreInfoCount’; did you mean ‘waitSemaphoreCount’?
+  745 |     submit_info.waitSemaphoreInfoCount = static_cast<uint32_t>(wait_semaphores.size());
+      |                 ^~~~~~~~~~~~~~~~~~~~~~
+      |                 waitSemaphoreCount
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp: In function ‘VkResult present_frame(VkSwapchainKHR, uint32_t)’:
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:761:46: warning: unused parameter ‘swapchain’ [-Wunused-parameter]
+  761 | static VkResult present_frame(VkSwapchainKHR swapchain,
+      |                               ~~~~~~~~~~~~~~~^~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:762:41: warning: unused parameter ‘image_index’ [-Wunused-parameter]
+  762 |                                uint32_t image_index) {
+      |                                ~~~~~~~~~^~~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp: At global scope:
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:801:10: error: redefinition of ‘VkDevice_T* g_device’
+  801 | VkDevice g_device = VK_NULL_HANDLE;
+      |          ^~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:20:10: note: ‘VkDevice_T* g_device’ previously defined here
+   20 | VkDevice g_device = VK_NULL_HANDLE;
+      |          ^~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:802:15: error: redefinition of ‘VkCommandPool_T* g_command_pool’
+  802 | VkCommandPool g_command_pool = VK_NULL_HANDLE;
+      |               ^~~~~~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:534:15: note: ‘VkCommandPool_T* g_command_pool’ previously defined here
+  534 | VkCommandPool g_command_pool = VK_NULL_HANDLE;
+      |               ^~~~~~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:803:14: error: redefinition of ‘VkSurfaceKHR_T* g_surface’
+  803 | VkSurfaceKHR g_surface = VK_NULL_HANDLE;
+      |              ^~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:18:14: note: ‘VkSurfaceKHR_T* g_surface’ previously defined here
+   18 | VkSurfaceKHR g_surface = VK_NULL_HANDLE;
+      |              ^~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:805:10: error: redefinition of ‘uint32_t g_current_image_index’
+  805 | uint32_t g_current_image_index = 0;
+      |          ^~~~~~~~~~~~~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:537:10: note: ‘uint32_t g_current_image_index’ previously defined here
+  537 | uint32_t g_current_image_index = 0;
+      |          ^~~~~~~~~~~~~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:806:13: error: redefinition of ‘SDL_Window* window_ptr’
+  806 | SDL_Window* window_ptr = nullptr;
+      |             ^~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:16:13: note: ‘SDL_Window* window_ptr’ previously defined here
+   16 | SDL_Window* window_ptr = nullptr;
+      |             ^~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp: In function ‘int run_render_loop()’:
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:823:38: error: ‘g_swapchain_images’ was not declared in this scope; did you mean ‘g_swapchain_image_views’?
+  823 |         uint32_t framebuffer_count = g_swapchain_images.size();
+      |                                      ^~~~~~~~~~~~~~~~~~
+      |                                      g_swapchain_image_views
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:831:31: error: ‘WINDOW_WIDTH’ was not declared in this scope; did you mean ‘WINT_WIDTH’?
+  831 |             fb_create.width = WINDOW_WIDTH;
+      |                               ^~~~~~~~~~~~
+      |                               WINT_WIDTH
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:832:32: error: ‘WINDOW_HEIGHT’ was not declared in this scope
+  832 |             fb_create.height = WINDOW_HEIGHT;
+      |                                ^~~~~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:856:61: error: cannot convert ‘uint32_t*’ {aka ‘unsigned int*’} to ‘VkImage_T**’
+  856 |     vkGetSwapchainImagesKHR(g_device, g_swapchain, nullptr, &fb_count, nullptr);
+      |                                                             ^~~~~~~~~
+      |                                                             |
+      |                                                             uint32_t* {aka unsigned int*}
+/usr/include/vulkan/vulkan_core.h:7751:49: note:   initializing argument 4 of ‘VkResult vkGetSwapchainImagesKHR(VkDevice, VkSwapchainKHR, uint32_t*, VkImage_T**)’
+ 7751 |     VkImage*                                    pSwapchainImages);
+      |     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:860:65: error: cannot convert ‘uint32_t*’ {aka ‘unsigned int*’} to ‘VkImage_T**’
+  860 |         vkGetSwapchainImagesKHR(g_device, g_swapchain, nullptr, &fb_count, swc_images.data());
+      |                                                                 ^~~~~~~~~
+      |                                                                 |
+      |                                                                 uint32_t* {aka unsigned int*}
+/usr/include/vulkan/vulkan_core.h:7751:49: note:   initializing argument 4 of ‘VkResult vkGetSwapchainImagesKHR(VkDevice, VkSwapchainKHR, uint32_t*, VkImage_T**)’
+ 7751 |     VkImage*                                    pSwapchainImages);
+      |     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:865:19: error: ‘VkImageViewCreateInfo’ {aka ‘struct VkImageViewCreateInfo’} has no member named ‘imageUsage’
+  865 |         view_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+      |                   ^~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp: In function ‘int main()’:
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:935:22: error: aggregate ‘main()::sigaction sa’ has incomplete type and cannot be defined
+  935 |     struct sigaction sa;
+      |                      ^~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp: In lambda function:
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:938:9: error: ‘cleanup_vulkan_resources’ was not declared in this scope
+  938 |         cleanup_vulkan_resources();
+      |         ^~~~~~~~~~~~~~~~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp: In function ‘int main()’:
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:943:19: error: ‘SA_RESTART’ was not declared in this scope; did you mean ‘ERESTART’?
+  943 |     sa.sa_flags = SA_RESTART;
+      |                   ^~~~~~~~~~
+      |                   ERESTART
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:944:15: error: ‘SIGINT’ was not declared in this scope
+  944 |     sigaction(SIGINT, &sa, nullptr);
+      |               ^~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:944:35: error: invalid use of incomplete type ‘struct main()::sigaction’
+  944 |     sigaction(SIGINT, &sa, nullptr);
+      |                                   ^
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:935:12: note: forward declaration of ‘struct main()::sigaction’
+  935 |     struct sigaction sa;
+      |            ^~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:945:15: error: ‘SIGTERM’ was not declared in this scope
+  945 |     sigaction(SIGTERM, &sa, nullptr);
+      |               ^~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:945:36: error: invalid use of incomplete type ‘struct main()::sigaction’
+  945 |     sigaction(SIGTERM, &sa, nullptr);
+      |                                    ^
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:935:12: note: forward declaration of ‘struct main()::sigaction’
+  935 |     struct sigaction sa;
+      |            ^~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:951:28: error: ‘init_vulkan_instance’ was not declared in this scope; did you mean ‘g_vulkan_instance’?
+  951 |     VkResult init_result = init_vulkan_instance();
+      |                            ^~~~~~~~~~~~~~~~~~~~
+      |                            g_vulkan_instance
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:958:5: error: ‘init_sdl_window’ was not declared in this scope
+  958 |     init_sdl_window();
+      |     ^~~~~~~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:961:5: error: ‘select_physical_device’ was not declared in this scope; did you mean ‘g_physical_device’?
+  961 |     select_physical_device();
+      |     ^~~~~~~~~~~~~~~~~~~~~~
+      |     g_physical_device
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:964:5: error: ‘setup_queues’ was not declared in this scope
+  964 |     setup_queues(g_physical_device);
+      |     ^~~~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:977:9: error: ‘cleanup_vulkan_resources’ was not declared in this scope
+  977 |         cleanup_vulkan_resources();
+      |         ^~~~~~~~~~~~~~~~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:978:9: error: ‘cleanup_sdl_resources’ was not declared in this scope
+  978 |         cleanup_sdl_resources();
+      |         ^~~~~~~~~~~~~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:1005:5: error: ‘cleanup_vulkan_resources’ was not declared in this scope
+ 1005 |     cleanup_vulkan_resources();
+      |     ^~~~~~~~~~~~~~~~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:1006:5: error: ‘cleanup_sdl_resources’ was not declared in this scope
+ 1006 |     cleanup_sdl_resources();
+      |     ^~~~~~~~~~~~~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:984:14: warning: unused variable ‘last_time’ [-Wunused-variable]
+  984 |     uint64_t last_time = SDL_GetTicks();
+      |              ^~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp: At global scope:
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:895:13: warning: ‘void render_frame()’ defined but not used [-Wunused-function]
+  895 | static void render_frame() {
+      |             ^~~~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:622:17: warning: ‘VkResult acquire_next_swapchain_image()’ defined but not used [-Wunused-function]
+  622 | static VkResult acquire_next_swapchain_image() {
+      |                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:331:17: warning: ‘VkResult create_graphics_pipeline(VkShaderModule, VkShaderModule)’ defined but not used [-Wunused-function]
+  331 | static VkResult create_graphics_pipeline(VkShaderModule vertex_module,
+      |                 ^~~~~~~~~~~~~~~~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:309:17: warning: ‘VkResult create_pipeline_layout()’ defined but not used [-Wunused-function]
+  309 | static VkResult create_pipeline_layout() {
+      |                 ^~~~~~~~~~~~~~~~~~~~~~
+/home/mochi/taz-decomp/src/main_complete_sdlvulkan.cpp:275:23: warning: ‘VkShaderModule_T* create_shader_module_from_file(const char*, VkShaderStageFlagBits)’ defined but not used [-Wunused-function]
+  275 | static VkShaderModule create_shader_module_from_file(const char* filename,
+      |                       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+make[2]: *** [CMakeFiles/taz_wanted.dir/build.make:76: CMakeFiles/taz_wanted.dir/src/main_complete_sdlvulkan.cpp.o] Error 1
+make[2]: Leaving directory '/home/mochi/taz-decomp/build'
+make[1]: *** [CMakeFiles/Makefile2:83: CMakeFiles/taz_wanted.dir/all] Error 2
+make[1]: Leaving directory '/home/mochi/taz-decomp/build'
+make: *** [Makefile:91: all] Error 2
+make: Leaving directory '/home/mochi/taz-decomp/build'
